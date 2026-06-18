@@ -1,0 +1,1 @@
+2026-06-17 16:16:07	7.9s	edge-ZuAPGaaoAOUIJ8z6	ERR	8c8e23332fa820fe62a399a9f7408829	a93189bf-0e55-4c82-ae0b-aee01102c2f5	nextflow -C /edgev3/io/projects/ZuAPGaaoAOUIJ8z6/nextflow/../nextflow.config -bg -q run /edgev3/workflows/Nextflow/metagenomics/nextflow/main.nf -name edge-ZuAPGaaoAOUIJ8z6

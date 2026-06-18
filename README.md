@@ -57,26 +57,7 @@ Logs from the helper script are appended to `logs/edgev3.log`. Application logs 
 
 ## Architecture And Data Flow
 
-```mermaid
-flowchart LR
-    browser["User browser"] -->|"HTTP :8080"| nginx["edgev3_web<br/>nginx:latest<br/>host 8080 -> container 80"]
-    nginx -->|"reverse proxy<br/>edgev3:5000"| app["edgev3<br/>Node/Express API + built React UI<br/>PM2 appserver x4 + cronserver"]
-
-    app -->|"metadata, users, project state"| mongo["mongodb<br/>edgev3-mongo:20260615<br/>MongoDB 7"]
-    secrets["./data/secrets/*.txt<br/>Docker secrets"] --> mongo
-    mongo -->|"database files"| mongoVol[("mongo_data<br/>/data/db")]
-
-    nfImage["edgev3_nextflow<br/>edgev3-nextflow:20260615"] -->|"shares conda/Nextflow/Apptainer runtime"| nfVol[("nextflowbinaries<br/>/opt/conda")]
-    nfVol --> app
-
-    app -->|"workflow definitions"| workflows["/edgev3/workflows/Nextflow<br/>metagenomics pipelines"]
-    app -->|"runtime env/config"| config["./data/webapp_server.env<br/>./data/webapp_client.env<br/>./data/container.config"]
-    app -->|"uploads, results, public assets,<br/>logs, DB backups"| output["./data/output/*"]
-    app -->|"reference data + Apptainer cache"| refdata["./data/refdata<br/>/project/refdata"]
-
-    workflows -->|"run jobs using configured executor<br/>default: local<br/>data/local.config"| output
-    workflows -->|"container image names from<br/>data/container.config"| containers["Workflow containers<br/>GHCR / Docker registries"]
-```
+![Flowchart](flowchart2.png)
 
 ### Compose Services
 

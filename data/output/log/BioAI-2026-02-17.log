@@ -1,0 +1,72 @@
+2026-02-17 21:24:47 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:24:47 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:24:47 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:24:47 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:24:47 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:24:47 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:24:47 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:24:47 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:24:48 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:24:48 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:24:48 [32minfo[39m: 	HTTP CRON server up and running on port 5555 !
+2026-02-17 21:24:48 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:24:48 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:24:48 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:24:49 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:24:49 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:24:49 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:24:49 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:25:17 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:25:17 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:26:03 [31merror[39m: 	login: Account admin@my.edge password is incorrect.
+2026-02-17 21:26:15 [31merror[39m: 	login: Account admin@my.edge password is incorrect.
+2026-02-17 21:26:47 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:26:47 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:26:48 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:26:48 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:28:00 [32minfo[39m: 	Processing local request: LybU6mBTDKUGUH2f
+2026-02-17 21:28:00 [32minfo[39m: 	Run bioAI...
+2026-02-17 21:28:00 [32minfo[39m: 	date > /bioai_gui/io/projects/LybU6mBTDKUGUH2f/run_time.txt && /opt/bioai/pipeline/bioai_runner.py -i /bioai_gui/io/projects/LybU6mBTDKUGUH2f/bioaiConf.json -o /bioai_gui/io/projects/LybU6mBTDKUGUH2f/output/assayDesign  && date >> /bioai_gui/io/projects/LybU6mBTDKUGUH2f/run_time.txt &
+2026-02-17 21:28:00 [32minfo[39m: 	Started local job with PID: 230
+2026-02-17 21:37:17 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:37:17 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:38:00 [32minfo[39m: 	Processing local request: Y5JswtunNStzssHN
+2026-02-17 21:38:00 [32minfo[39m: 	Run bioAI...
+2026-02-17 21:38:00 [32minfo[39m: 	date > /bioai_gui/io/projects/Y5JswtunNStzssHN/run_time.txt && /opt/bioai/pipeline/bioai_runner.py -i /bioai_gui/io/projects/Y5JswtunNStzssHN/bioaiConf.json -o /bioai_gui/io/projects/Y5JswtunNStzssHN/output/assayDesign  && date >> /bioai_gui/io/projects/Y5JswtunNStzssHN/run_time.txt &
+2026-02-17 21:38:00 [32minfo[39m: 	Started local job with PID: 259
+2026-02-17 21:47:33 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:47:33 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:47:33 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:47:33 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:47:33 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:47:33 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:47:33 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:47:33 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:47:34 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:47:34 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:47:34 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:47:34 [32minfo[39m: 	HTTP CRON server up and running on port 5555 !
+2026-02-17 21:47:34 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:47:34 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:47:36 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:47:36 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:47:36 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:47:36 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:48:03 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:48:03 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:48:04 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:48:04 [32minfo[39m: 	HTTP CRON server up and running on port 5555 !
+2026-02-17 21:48:04 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:48:04 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:49:03 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:49:03 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:50:33 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:50:33 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:50:34 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:50:34 [32minfo[39m: 	HTTP production server up and running on port 5000 !
+2026-02-17 21:52:00 [32minfo[39m: 	Processing local request: 6XsN61KlCthdOQWS
+2026-02-17 21:52:00 [32minfo[39m: 	Run bioAI...
+2026-02-17 21:52:00 [32minfo[39m: 	date > /bioai_gui/io/projects/6XsN61KlCthdOQWS/run_time.txt && /opt/bioai/pipeline/bioai_runner.py -i /bioai_gui/io/projects/6XsN61KlCthdOQWS/bioaiConf.json -o /bioai_gui/io/projects/6XsN61KlCthdOQWS/output/assayDesign  && date >> /bioai_gui/io/projects/6XsN61KlCthdOQWS/run_time.txt &
+2026-02-17 21:52:00 [32minfo[39m: 	Started local job with PID: 298
+2026-02-17 21:52:03 [32minfo[39m: 	Successfully connected to database mongodb://bioai_app:bioai_mongodb_pass@mongodb:27017/bioai?authSource=admin
+2026-02-17 21:52:03 [32minfo[39m: 	HTTP production server up and running on port 5000 !

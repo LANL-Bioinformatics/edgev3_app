@@ -1,0 +1,116 @@
+services:
+  edgev3_web:
+    image: nginx:latest
+    platform: linux/amd64
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./data/web_nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./data/splash.html:/usr/share/nginx/html/splash.html
+    command:
+    - /bin/sh
+    - -c
+    - |
+      mkdir -p /etc/nginx/logs
+      while :; do
+        sleep 6h & wait $${!}
+        nginx -s reload
+      done &
+      nginx -g "daemon off;"
+  edgev3_nextflow:
+    image: edgev3-nextflow:20260615
+    platform: linux/amd64
+    volumes:
+      - nextflowbinaries:/opt/conda
+  edgev3:
+    image: edgev3:20260615
+    platform: linux/amd64
+    security_opt:
+      - seccomp=unconfined
+      - systempaths=unconfined
+    devices:
+      - /dev/fuse:/dev/fuse
+    restart: always 
+    environment:
+      - PATH=/opt/conda/envs/edgev3/bin:${PATH}
+      #- CONN_STR=mongodb://edgev3_app:edgev3_mongodb_pass@mongodb:27017/edgev3?authSource=admin
+      - LD_LIBRARY_PATH=/opt/conda/envs/edgev3/lib
+      #- PYTHONPATH=/opt/conda/envs/edgev3/lib/python3.8/site-packages:${PYTHONPATH}
+     #- PERL5LIB=/opt/conda/envs/edgev3/lib/perl5/site_perl:/opt/conda/envs/edgev3/lib/perl5/vendor_perl:${PERL5LIB}
+    command:
+      - /bin/sh
+      - -c
+      - | 
+        cd /edgev3/webapp/client/; npm run build;   
+        pm2 resurrect; pm2 reload all --update-env && tail -f /dev/null
+      ## set up jbrowse in projects dir
+      ## rebuild the client site since the bind client .env
+      ## start the node server and front end mode
+    depends_on:
+      edgev3_web:
+        condition: service_started
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data/webapp_server.env:/edgev3/webapp/server/.env
+      - ./data/webapp_client.env:/edgev3/webapp/client/.env
+      - nextflowbinaries:/opt/conda
+      - ./data/output/projects:/edgev3/io/projects
+      - ./data/output/db:/edgev3/io/db
+      - ./data/output/log:/edgev3/io/log
+      - ./data/output/public:/edgev3/io/public
+      - ./data/output/sra:/edgev3/io/sra
+      - ./data/output/upload:/edgev3/io/upload
+      - ./data/output/bulksubmissions:/edgev3/io/bulksubmissions
+      - ./data/container.config:/edgev3/workflows/Nextflow/metagenomics/configs/container.config
+      - ./data/local.config:/edgev3/workflows/Nextflow/metagenomics/configs/local.config
+      #- ./data/nextflow.config:/edgev3/workflows/Nextflow/metagenomics/nextflow/nextflow.config
+      - ./data/refdata:/project/refdata
+  mongodb:
+    image: edgev3-mongo:20260615
+    restart: always 
+    platform: linux/amd64
+    expose:
+      - "27017"
+    volumes:
+      - mongo_data:/data/db
+    secrets:
+      - mongo_root_user
+      - mongo_root_pass
+      - mongo_app_user
+      - mongo_app_pass
+      - mongo_admin_user
+      - mongo_admin_pass
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME_FILE: /run/secrets/mongo_root_user
+      MONGODB_INITDB_ROOT_PASSWORD_FILE: /run/secrets/mongo_root_pass
+      MONGO_APP_USER_FILE: /run/secrets/mongo_app_user
+      MONGO_APP_PASS_FILE: /run/secrets/mongo_app_pass
+      MONGO_ADMIN_USER_FILE: /run/secrets/mongo_admin_user
+      MONGO_ADMIN_PASS_FILE: /run/secrets/mongo_admin_pass
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+secrets:
+  mongo_root_user:
+    file: ./data/secrets/mongo_root_user.txt
+  mongo_root_pass:
+    file: ./data/secrets/mongo_root_pass.txt
+  mongo_app_user:
+    file: ./data/secrets/mongo_app_user.txt
+  mongo_app_pass:
+    file: ./data/secrets/mongo_app_pass.txt
+  mongo_admin_user:
+    file: ./data/secrets/mongo_admin_user.txt
+  mongo_admin_pass:
+    file: ./data/secrets/mongo_admin_pass.txt
+
+volumes:
+  nextflowbinaries:
+  mongo_data:

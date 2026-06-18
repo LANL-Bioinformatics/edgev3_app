@@ -1,0 +1,34 @@
+FROM mambaorg/micromamba:latest
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=C
+ENV envname=edgev3
+# SHELL ["/bin/bash", "-c"] 
+
+USER root 
+RUN apt-get -y update && apt-get -y install --no-install-recommends vim libz-dev liblmdb-dev 
+
+#  nextflow apptainer
+RUN micromamba create -n $envname -y -c conda-forge -c bioconda python=3.12 nextflow apptainer \
+    && micromamba clean --all -y \
+    && echo "micromamba activate $envname" >> ~/.bashrc
+
+ENV PATH="/opt/conda/envs/$envname/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/conda/envs/$envname/lib"
+
+# install the workflow
+RUN eval "$(micromamba shell hook --shell bash)" \ 
+    && micromamba config append channels conda-forge \
+    && micromamba config set channel_priority strict \
+    && micromamba activate $envname
+
+RUN apt-get autoremove -y && apt-get clean
+
+WORKDIR /opt/conda/envs/$envname
+
+CMD tail -f /dev/null
+#/opt/conda/envs/$envname/opt/jbrowse/
+#/opt/conda/envs/$envname/lib/perl5/vendor_perl
+#/opt/conda/envs/$envname/lib/perl5/site_perl
+#/opt/conda/envs/$envname/lib/python3.12/site-packages

@@ -1,2 +1,0 @@
-2024-06-09 22:00:00 [32minfo[39m: 	delete project: 0OMnGOrIOsLawix8
-2024-06-09 22:00:00 [31merror[39m: 	Failed to delete /bioai_gui/output/projects/0OMnGOrIOsLawix8:Error: ENOENT: no such file or directory, stat '/bioai_gui/output/projects/0OMnGOrIOsLawix8'

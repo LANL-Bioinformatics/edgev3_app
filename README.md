@@ -11,7 +11,7 @@ The bundle includes the Docker Compose stack, helper scripts, image build/load a
 - Docker Engine or Docker Desktop with Compose support.
 - Enough local disk space for project outputs, reference data, workflow caches, and container images.
 - Host ports `8080` and `5000` available. The helper script also checks `27017` during some commands.
-- Linux `amd64` container support. The compose file sets `platform: linux/amd64` for all services, so Apple Silicon hosts will use Docker's emulation path.
+- Linux `amd64` container support. The compose file sets `platform: linux/amd64` for all services. Apple Mac OS is not supported.
 
 ### Start the Stack
 

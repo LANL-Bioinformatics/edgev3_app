@@ -1,0 +1,3 @@
+[submodule "src/edge-v3"]
+	path = src/edge-v3
+	url = git@github.com:LANL-Bioinformatics/edge-v3.git

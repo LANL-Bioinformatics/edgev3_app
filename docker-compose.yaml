@@ -24,7 +24,7 @@ services:
     volumes:
       - nextflowbinaries:/opt/conda
   edgev3:
-    image: edgev3:20260615
+    image: edgev3:2026013
     platform: linux/amd64
     security_opt:
       - seccomp=unconfined

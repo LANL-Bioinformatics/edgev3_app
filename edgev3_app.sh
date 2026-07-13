@@ -82,7 +82,7 @@ run_cmd() {
 IMAGES=(
     "nginx nginx_latest_$ARCH.tgz latest"
     "edgev3-nextflow edgev3-nextflow_20260615_$ARCH.tgz 20260615"
-    "edgev3 edgev3_20260615_$ARCH.tgz 20260615"
+    "edgev3 edgev3_20260713_$ARCH.tgz 20260713"
     "edgev3-mongo edgev3-mongo_20260615_$ARCH.tgz 20260615"
 )
 

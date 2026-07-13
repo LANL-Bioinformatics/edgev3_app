@@ -64,7 +64,7 @@ Logs from the helper script are appended to `logs/edgev3.log`. Application logs 
 | Service | Image | Role |
 | --- | --- | --- |
 | `edgev3_web` | `nginx:latest` | Public entry point on `localhost:8080`; proxies requests to `edgev3:5000` and serves a splash page while the app is unavailable. |
-| `edgev3` | `edgev3:20260615` | Main EDGEv3 web application. Builds the React client on startup, runs the Express API and cron monitor under PM2, executes workflows, and reads/writes mounted data. |
+| `edgev3` | `edgev3:20260713` | Main EDGEv3 web application. Builds the React client on startup, runs the Express API and cron monitor under PM2, executes workflows, and reads/writes mounted data. |
 | `edgev3_nextflow` | `edgev3-nextflow:20260615` | Provides the shared `/opt/conda` runtime volume containing Nextflow and Apptainer tooling. |
 | `mongodb` | `edgev3-mongo:20260615` | MongoDB database initialized with local secret files and persisted in the `mongo_data` Docker volume. |
 

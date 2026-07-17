@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
-SCRIPT_VERSION="2026.06.15"
+SCRIPT_VERSION="2026.07.17"
 
 ############################
 # Paths & logging
@@ -11,6 +11,9 @@ APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 IMAGES_DIR="$APP_DIR/docker_images"
 LOG_DIR="$APP_DIR/logs"
 LOG_FILE="$LOG_DIR/edgev3.log"
+SECRETS_DIR="$APP_DIR/data/secrets"
+SERVER_ENV_FILE="$APP_DIR/data/webapp_server.env"
+SERVER_ENV_TEMPLATE="$APP_DIR/data/webapp_server.env.example"
 
 mkdir -p "$LOG_DIR"
 exec > >(tee -a "$LOG_FILE") 2>&1
@@ -74,6 +77,134 @@ run_cmd() {
     log "Running: $*"
     eval "$@"
   fi
+}
+
+generate_random_hex() {
+  local byte_count="${1:-32}"
+
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex "$byte_count"
+  elif [[ -r /dev/urandom ]] && command -v od >/dev/null 2>&1; then
+    od -An -N "$byte_count" -tx1 /dev/urandom | tr -d ' \n'
+  else
+    log "FATAL: openssl or /dev/urandom with od is required to generate secrets" >&2
+    exit 1
+  fi
+}
+
+set_env_value() {
+  local key="$1"
+  local value="$2"
+  local file="$3"
+  local tmp_file="${file}.tmp.$$"
+
+  (
+    umask 077
+    awk -v key="$key" -v value="$value" '
+      index($0, key "=") == 1 {
+        if (!found) {
+          print key "=" value
+          found = 1
+        }
+        next
+      }
+      { print }
+      END {
+        if (!found) {
+          print key "=" value
+        }
+      }
+    ' "$file" > "$tmp_file"
+  )
+  chmod 600 "$tmp_file"
+  mv "$tmp_file" "$file"
+}
+
+prepare_runtime_config() {
+  local -a secret_names=(
+    mongo_root_user.txt
+    mongo_root_pass.txt
+    mongo_app_user.txt
+    mongo_app_pass.txt
+    mongo_admin_user.txt
+    mongo_admin_pass.txt
+  )
+  local existing_count=0
+  local secret_name secret_path
+  local mongo_root_pass mongo_app_user mongo_app_pass mongo_admin_pass
+  local jwt_secret current_jwt
+
+  if $DRY_RUN; then
+    log "[DRY-RUN] Would create missing runtime secrets and synchronize $SERVER_ENV_FILE"
+    return
+  fi
+
+  mkdir -p "$SECRETS_DIR"
+  chmod 700 "$SECRETS_DIR"
+
+  for secret_name in "${secret_names[@]}"; do
+    secret_path="$SECRETS_DIR/$secret_name"
+    if [[ -s "$secret_path" ]]; then
+      ((existing_count += 1))
+    fi
+  done
+
+  if (( existing_count == 0 )); then
+    log "Generating MongoDB credentials for first start..."
+    mongo_root_pass="$(generate_random_hex 32)"
+    mongo_app_pass="$(generate_random_hex 32)"
+    mongo_admin_pass="$(generate_random_hex 32)"
+    (
+      umask 077
+      printf '%s\n' 'root' > "$SECRETS_DIR/mongo_root_user.txt"
+      printf '%s\n' "$mongo_root_pass" > "$SECRETS_DIR/mongo_root_pass.txt"
+      printf '%s\n' 'edgev3_app' > "$SECRETS_DIR/mongo_app_user.txt"
+      printf '%s\n' "$mongo_app_pass" > "$SECRETS_DIR/mongo_app_pass.txt"
+      printf '%s\n' 'edgev3_admin' > "$SECRETS_DIR/mongo_admin_user.txt"
+      printf '%s\n' "$mongo_admin_pass" > "$SECRETS_DIR/mongo_admin_pass.txt"
+    )
+  elif (( existing_count != ${#secret_names[@]} )); then
+    log "FATAL: MongoDB secrets are only partially initialized."
+    log "Restore the missing files, or remove all files in $SECRETS_DIR and run init to create a new database with new credentials."
+    exit 1
+  else
+    log "Using existing MongoDB credentials."
+  fi
+
+  chmod 600 "$SECRETS_DIR"/*.txt
+
+  mongo_app_user="$(tr -d '\r\n' < "$SECRETS_DIR/mongo_app_user.txt")"
+  mongo_app_pass="$(tr -d '\r\n' < "$SECRETS_DIR/mongo_app_pass.txt")"
+  if [[ ! "$mongo_app_user" =~ ^[A-Za-z0-9._~-]+$ ]] ||
+     [[ ! "$mongo_app_pass" =~ ^[A-Za-z0-9._~-]+$ ]]; then
+    log "FATAL: MongoDB app credentials contain characters that are unsafe in DATABASE_HOST."
+    exit 1
+  fi
+
+  if [[ ! -f "$SERVER_ENV_FILE" ]]; then
+    [[ -f "$SERVER_ENV_TEMPLATE" ]] || {
+      log "FATAL: Missing server environment template $SERVER_ENV_TEMPLATE"
+      exit 1
+    }
+    log "Creating server environment for first start..."
+    (
+      umask 077
+      cp "$SERVER_ENV_TEMPLATE" "$SERVER_ENV_FILE"
+    )
+  fi
+
+  current_jwt="$(awk -F= '/^JWT_SECRET=/{print substr($0, index($0, "=") + 1); exit}' "$SERVER_ENV_FILE")"
+  if [[ -z "$current_jwt" || "$current_jwt" == "__GENERATED_ON_FIRST_START__" ]]; then
+    jwt_secret="$(generate_random_hex 32)"
+    set_env_value "JWT_SECRET" "$jwt_secret" "$SERVER_ENV_FILE"
+  fi
+
+  set_env_value \
+    "DATABASE_HOST" \
+    "$mongo_app_user:$mongo_app_pass@mongodb" \
+    "$SERVER_ENV_FILE"
+  chmod 600 "$SERVER_ENV_FILE"
+  log "Server DATABASE_HOST is synchronized with the MongoDB app credentials."
 }
 
 ############################
@@ -189,6 +320,7 @@ import_images() {
 init_spades() {
   log "Initializing SPADES (RESET volumes)"
   cd "$APP_DIR"
+  prepare_runtime_config
   run_cmd $COMPOSE_CMD down -v
   run_cmd $COMPOSE_CMD up -d
 }
@@ -196,6 +328,7 @@ init_spades() {
 start_spades() {
   log "Starting SPADES"
   cd "$APP_DIR"
+  prepare_runtime_config
   run_cmd $COMPOSE_CMD up -d
 }
 

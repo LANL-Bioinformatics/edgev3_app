@@ -34,7 +34,6 @@ services:
     restart: always 
     environment:
       - PATH=/opt/conda/envs/edgev3/bin:${PATH}
-      #- CONN_STR=mongodb://edgev3_app:edgev3_mongodb_pass@mongodb:27017/edgev3?authSource=admin
       - LD_LIBRARY_PATH=/opt/conda/envs/edgev3/lib
       #- PYTHONPATH=/opt/conda/envs/edgev3/lib/python3.8/site-packages:${PYTHONPATH}
      #- PERL5LIB=/opt/conda/envs/edgev3/lib/perl5/site_perl:/opt/conda/envs/edgev3/lib/perl5/vendor_perl:${PERL5LIB}

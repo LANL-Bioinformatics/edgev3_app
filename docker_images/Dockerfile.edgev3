@@ -20,7 +20,7 @@ RUN ln -s /usr/lib/x86_64-linux-gnu/libmpich.so.12 /usr/lib/x86_64-linux-gnu/lib
 RUN ln -s /usr/lib/aarch64-linux-gnu/libmpich.so.12 /usr/lib/aarch64-linux-gnu/libmpich.so.0 | true
 
 RUN npm i -g mongosh
-RUN cd /edgev3/webapp/client; sed -e 's|# VITE_API_URL=|VITE_API_URL=|g' -e 's|5000|8080|g' .env.example > .env; npm run build
+RUN cd /edgev3/webapp/client; cp .env.example > .env; npm run build
 
 RUN cd /edgev3/; pm2 start pm2.config.js; pm2 startup; pm2 save
 

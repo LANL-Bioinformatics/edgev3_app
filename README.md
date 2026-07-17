@@ -29,6 +29,8 @@ http://localhost:8080
 
 `init` imports required images when needed, resets Docker named volumes, and starts the stack. After the first initialization, use `check`, `start`, and `stop` for normal lifecycle management.
 
+On the first `init`, `start`, or `restart`, the helper generates MongoDB passwords and a JWT secret, creates `data/webapp_server.env` from its checked-in example, and inserts the app user's credentials into `DATABASE_HOST`. Existing secrets are reused on later starts.
+
 ```bash
 ./edgev3_app.sh check
 ./edgev3_app.sh start
@@ -79,17 +81,20 @@ Logs from the helper script are appended to `logs/edgev3.log`. Application logs 
 | `src/edge-v3/` | EDGEv3 application source copied into the app image. |
 | `src/edgev3-mongo/` | MongoDB initialization assets used by the Mongo image. |
 | `data/web_nginx.conf` | Nginx reverse proxy configuration. |
-| `data/webapp_server.env` | Server-side application settings such as ports, database connection, workflow settings, email, JWT, and optional AI summary provider settings. |
+| `data/webapp_server.env.example` | Checked-in, non-secret template for the generated server environment. |
+| `data/webapp_server.env` | Generated, Git-ignored server settings containing the database connection, JWT, and optional provider keys. |
 | `data/webapp_client.env` | Client-side feature flags and Vite settings. |
 | `data/container.config` | Nextflow/Apptainer container mapping for individual workflow stages. |
 | `data/local.config` | Nextflow local process configuration. |
-| `data/secrets/` | MongoDB usernames/passwords mounted as Docker secrets. |
+| `data/secrets/` | Generated, Git-ignored MongoDB usernames/passwords mounted as Docker secrets. |
 | `data/output/` | Persistent bind-mounted workspace for projects, uploads, public files, logs, SRA data, bulk submissions, and database backups. |
 | `data/refdata/` | Reference data and Nextflow/Apptainer cache mount. |
 
 ## Configuration Notes
 
-- Replace local secrets before using this bundle outside a disposable development environment. This includes `data/secrets/*.txt`, `JWT_SECRET`, database credentials, and any provider API keys in `data/webapp_server.env`.
+- MongoDB secrets and `data/webapp_server.env` are generated with owner-only permissions and are not tracked by Git. Back them up securely if the persisted `mongo_data` volume must be retained.
+- To rotate MongoDB credentials, remove all six files under `data/secrets/` and run `./edgev3_app.sh init`. The `init` command resets the MongoDB volume so it can be initialized with the new credentials. Do not delete only part of the secret set.
+- Add provider API keys only to the generated `data/webapp_server.env`; never add them to `data/webapp_server.env.example`.
 - Do not copy server-side provider keys into `data/webapp_client.env`; browser-visible configuration should only contain public feature flags and URLs.
 - `NEXTFLOW_EXECUTOR` defaults to `local` in `data/webapp_server.env`. Use the server environment file and the appropriate Nextflow config files if switching to another executor such as Slurm.
 - Workflow container image selections live in `data/container.config`, which is mounted over the in-image Nextflow metagenomics container config.
@@ -133,7 +138,7 @@ The generated archives are written to `docker_images/` with the current architec
 
 - If the web UI shows the splash page, the Nginx container is running but `edgev3` is not ready or not reachable yet. Check `./edgev3_app.sh status` and `data/output/log/`.
 - If startup fails on ports, stop the process using the reported port or edit the host-side port mappings in `docker-compose.yaml`.
-- If MongoDB remains unhealthy, verify the secret files under `data/secrets/` exist and contain the expected credentials.
+- If MongoDB remains unhealthy, verify that all six secret files under `data/secrets/` exist. The helper deliberately stops when only part of the set is present.
 - If workflow jobs fail to pull or run containers, check `data/container.config`, `data/local.config`, `data/refdata/nextflow/.apptainer`, Docker/Apptainer availability, and network access to the configured registries.
 
 ## License

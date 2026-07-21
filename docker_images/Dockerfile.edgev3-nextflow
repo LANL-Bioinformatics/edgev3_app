@@ -1,34 +1,27 @@
-FROM mambaorg/micromamba:latest
+FROM mambaorg/micromamba:2.8.1-debian13-slim@sha256:fb18405d6004af757a38ec498a078240b4fd5549146990a484c28bb7e78aace4
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV LANG=en_US.UTF-8
-ENV LC_ALL=C
-ENV envname=edgev3
-# SHELL ["/bin/bash", "-c"] 
+ARG DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    ENV_NAME=edgev3
 
-USER root 
-RUN apt-get -y update && apt-get -y install --no-install-recommends vim libz-dev liblmdb-dev 
+USER root
+RUN apt-get -y update \
+    && apt-get -y install --no-install-recommends vim libz-dev liblmdb-dev \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-#  nextflow apptainer
-RUN micromamba create -n $envname -y -c conda-forge -c bioconda python=3.12 nextflow apptainer \
+USER mambauser:mambauser
+
+# Install Nextflow and Apptainer as the unprivileged runtime user.
+RUN micromamba create --name "${ENV_NAME}" --yes -c conda-forge -c bioconda python=3.12 nextflow apptainer \
     && micromamba clean --all -y \
-    && echo "micromamba activate $envname" >> ~/.bashrc
+    && echo "micromamba activate ${ENV_NAME}" >> "${HOME}/.bashrc"
 
-ENV PATH="/opt/conda/envs/$envname/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/opt/conda/envs/$envname/lib"
+ENV PATH="/opt/conda/envs/${ENV_NAME}/bin:${PATH}" \
+    LD_LIBRARY_PATH="/opt/conda/envs/${ENV_NAME}/lib"
 
-# install the workflow
-RUN eval "$(micromamba shell hook --shell bash)" \ 
-    && micromamba config append channels conda-forge \
-    && micromamba config set channel_priority strict \
-    && micromamba activate $envname
+WORKDIR /opt/conda/envs/${ENV_NAME}
 
-RUN apt-get autoremove -y && apt-get clean
-
-WORKDIR /opt/conda/envs/$envname
-
-CMD tail -f /dev/null
-#/opt/conda/envs/$envname/opt/jbrowse/
-#/opt/conda/envs/$envname/lib/perl5/vendor_perl
-#/opt/conda/envs/$envname/lib/perl5/site_perl
-#/opt/conda/envs/$envname/lib/python3.12/site-packages
+CMD ["tail", "-f", "/dev/null"]

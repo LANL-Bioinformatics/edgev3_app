@@ -28,7 +28,7 @@ docker_build() {
     build_and_save_if_missing "edgev3:20260721" "linux/$ARCH" "docker_images/Dockerfile.edgev3" "docker_images/edgev3_20260721_$ARCH.tgz" "edgev3"
 
     # edgev3-nextflow
-    build_and_save_if_missing "edgev3-nextflow:20260615" "linux/$ARCH" "docker_images/Dockerfile.edgev3-nextflow" "docker_images/edgev3-nextflow_20260615_$ARCH.tgz" "edgev3-nextflow"
+    build_and_save_if_missing "edgev3-nextflow:20260721" "linux/$ARCH" "docker_images/Dockerfile.edgev3-nextflow" "docker_images/edgev3-nextflow_20260721_$ARCH.tgz" "edgev3-nextflow"
 
     # mongodb
     build_and_save_if_missing "edgev3-mongo:20260721" "linux/$ARCH" "docker_images/Dockerfile.edgev3-mongo" "docker_images/edgev3-mongo_20260721_$ARCH.tgz" "edgev3-mongo"

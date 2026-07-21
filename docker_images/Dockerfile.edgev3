@@ -1,36 +1,50 @@
-FROM node:20
+FROM node:20@sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5
 LABEL maintainer="chienchi@lanl.gov"
 
-RUN npm install pm2@latest -g
-RUN mkdir -p /edgev3
-COPY ./src/edge-v3/ /edgev3/
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+ENV PM2_HOME=/home/node/.pm2
+
+RUN npm install pm2@latest -g \
+    && install -d -o node -g node /edgev3 "${PM2_HOME}"
+COPY --chown=node:node ./src/edge-v3/ /edgev3/
 WORKDIR /edgev3
 
-RUN cd /edgev3/installation; bash install-edgev3.sh;  
-RUN apt-get -qq update ; apt-get -qq install -y --no-install-recommends vim curl mpich zlib1g-dev liblmdb-dev ca-certificates gnupg lsb-release\
-    && update-ca-certificates \    
+RUN cd /edgev3/installation \
+    && bash install-edgev3.sh
+RUN apt-get -qq update \
+    && apt-get -qq install -y --no-install-recommends vim curl mpich zlib1g-dev liblmdb-dev ca-certificates gnupg lsb-release \
+    && update-ca-certificates \
     && install -m 0755 -d /etc/apt/keyrings \
-    && curl -sS https://download.docker.com/linux/debian/gpg | gpg --dearmor > /usr/share/keyrings/docker-ce.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-ce.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg \
+        | gpg --dearmor --output /etc/apt/keyrings/docker-ce.gpg \
+    && chmod a+r /etc/apt/keyrings/docker-ce.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker-ce.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list \
     && apt-get -qq update \
     && apt-get -qq install -y --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
     && apt-get autoremove -y \
-    && apt-get clean
-RUN ln -s /usr/lib/x86_64-linux-gnu/libmpich.so.12 /usr/lib/x86_64-linux-gnu/libmpich.so.0 | true
-RUN ln -s /usr/lib/aarch64-linux-gnu/libmpich.so.12 /usr/lib/aarch64-linux-gnu/libmpich.so.0 | true
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+RUN if [ -e /usr/lib/x86_64-linux-gnu/libmpich.so.12 ]; then \
+        ln -sf /usr/lib/x86_64-linux-gnu/libmpich.so.12 /usr/lib/x86_64-linux-gnu/libmpich.so.0; \
+    fi \
+    && if [ -e /usr/lib/aarch64-linux-gnu/libmpich.so.12 ]; then \
+        ln -sf /usr/lib/aarch64-linux-gnu/libmpich.so.12 /usr/lib/aarch64-linux-gnu/libmpich.so.0; \
+    fi
 
 RUN npm i -g mongosh
-RUN cd /edgev3/webapp/client; cp .env.example > .env; npm run build
+RUN cd /edgev3/webapp/client \
+    && cp .env.example .env \
+    && npm run build \
+    && chown -R node:node /edgev3 "${PM2_HOME}"
 
-RUN cd /edgev3/; pm2 start pm2.config.js; pm2 startup; pm2 save
+USER node:node
 
-RUN echo "alias ll='ls -alh'" >>  ~/.bashrc
+RUN pm2 start pm2.config.js \
+    && pm2 save \
+    && pm2 kill \
+    && echo "alias ll='ls -alh'" >> "${HOME}/.bashrc"
 
 EXPOSE 5000
 
-#ENTRYPOINT ["pm2", "resurrect"]
-
-#CMD ["pm2", "resurrect", "&&", "tail -f /dev/null"]
-#CMD pm2 resurrect; pm2 reload all --update-env && tail -f /dev/null
 CMD ["pm2-runtime", "pm2.config.js"]
-

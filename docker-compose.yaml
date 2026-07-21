@@ -19,7 +19,7 @@ services:
       done &
       nginx -g "daemon off;"
   edgev3_nextflow:
-    image: edgev3-nextflow:20260615
+    image: edgev3-nextflow:20260721
     platform: linux/amd64
     volumes:
       - nextflowbinaries:/opt/conda

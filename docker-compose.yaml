@@ -23,8 +23,23 @@ services:
     platform: linux/amd64
     volumes:
       - nextflowbinaries:/opt/conda
+  edgev3_admin_init:
+    image: edgev3:20260713
+    platform: linux/amd64
+    restart: "no"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    secrets:
+      - mongo_app_user
+      - mongo_app_pass
+      - edgev3_admin_password
+      - edgev3_admin_code
+    volumes:
+      - ./src/edgev3-mongo/installation/init-edgev3-admin.js:/runtime/init-edgev3-admin.js:ro
+    command: ["node", "/runtime/init-edgev3-admin.js"]
   edgev3:
-    image: edgev3:2026013
+    image: edgev3:20260713
     platform: linux/amd64
     security_opt:
       - seccomp=unconfined
@@ -51,6 +66,8 @@ services:
         condition: service_started
       mongodb:
         condition: service_healthy
+      edgev3_admin_init:
+        condition: service_completed_successfully
     ports:
       - "5000:5000"
     volumes:
@@ -69,7 +86,7 @@ services:
       #- ./data/nextflow.config:/edgev3/workflows/Nextflow/metagenomics/nextflow/nextflow.config
       - ./data/refdata:/project/refdata
   mongodb:
-    image: edgev3-mongo:20260615
+    image: edgev3-mongo:20260721
     restart: always 
     platform: linux/amd64
     expose:
@@ -109,6 +126,10 @@ secrets:
     file: ./data/secrets/mongo_admin_user.txt
   mongo_admin_pass:
     file: ./data/secrets/mongo_admin_pass.txt
+  edgev3_admin_password:
+    file: ./data/secrets/edgev3_admin_password.txt
+  edgev3_admin_code:
+    file: ./data/secrets/edgev3_admin_code.txt
 
 volumes:
   nextflowbinaries:

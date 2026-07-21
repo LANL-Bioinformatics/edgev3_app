@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
-SCRIPT_VERSION="2026.07.17"
+SCRIPT_VERSION="2026.07.21"
 
 ############################
 # Paths & logging
@@ -92,6 +92,19 @@ generate_random_hex() {
   fi
 }
 
+generate_random_six_digit_code() {
+  local random_hex code
+
+  while :; do
+    random_hex="$(generate_random_hex 4)"
+    printf -v code '%06d' "$((16#$random_hex % 1000000))"
+    if [[ "$code" != "000000" ]]; then
+      printf '%s' "$code"
+      return
+    fi
+  done
+}
+
 set_env_value() {
   local key="$1"
   local value="$2"
@@ -129,9 +142,15 @@ prepare_runtime_config() {
     mongo_admin_user.txt
     mongo_admin_pass.txt
   )
+  local -a web_admin_secret_names=(
+    edgev3_admin_password.txt
+    edgev3_admin_code.txt
+  )
   local existing_count=0
+  local web_admin_existing_count=0
   local secret_name secret_path
   local mongo_root_pass mongo_app_user mongo_app_pass mongo_admin_pass
+  local edgev3_admin_password edgev3_admin_code
   local jwt_secret current_jwt
 
   if $DRY_RUN; then
@@ -169,6 +188,32 @@ prepare_runtime_config() {
     exit 1
   else
     log "Using existing MongoDB credentials."
+  fi
+
+  for secret_name in "${web_admin_secret_names[@]}"; do
+    secret_path="$SECRETS_DIR/$secret_name"
+    if [[ -s "$secret_path" ]]; then
+      ((web_admin_existing_count += 1))
+    fi
+  done
+
+  if (( web_admin_existing_count == 0 )); then
+    log "Generating the initial EDGEv3 web administrator credentials..."
+    edgev3_admin_password="$(generate_random_hex 16)"
+    edgev3_admin_code="$(generate_random_six_digit_code)"
+    (
+      umask 077
+      printf '%s\n' "$edgev3_admin_password" > "$SECRETS_DIR/edgev3_admin_password.txt"
+      printf '%s\n' "$edgev3_admin_code" > "$SECRETS_DIR/edgev3_admin_code.txt"
+    )
+    log "Initial admin login: admin@my.edge"
+    log "Initial admin password saved to $SECRETS_DIR/edgev3_admin_password.txt"
+  elif (( web_admin_existing_count != ${#web_admin_secret_names[@]} )); then
+    log "FATAL: EDGEv3 web administrator secrets are only partially initialized."
+    log "Restore the missing file, or remove both edgev3_admin_*.txt files and start again to rotate the bootstrap credential."
+    exit 1
+  else
+    log "Using existing EDGEv3 web administrator bootstrap credentials."
   fi
 
   chmod 600 "$SECRETS_DIR"/*.txt
@@ -214,7 +259,7 @@ IMAGES=(
     "nginx nginx_latest_$ARCH.tgz latest"
     "edgev3-nextflow edgev3-nextflow_20260615_$ARCH.tgz 20260615"
     "edgev3 edgev3_20260713_$ARCH.tgz 20260713"
-    "edgev3-mongo edgev3-mongo_20260615_$ARCH.tgz 20260615"
+    "edgev3-mongo edgev3-mongo_20260721_$ARCH.tgz 20260721"
 )
 
 ############################

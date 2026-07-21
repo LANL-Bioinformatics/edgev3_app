@@ -43,13 +43,3 @@ db.createUser({
 print("MongoDB users created successfully");
 
 EOF
-
-echo "Importing initial users collection..."
-
-mongoimport \
-  --authenticationDatabase=admin \
-  -u "$MONGODB_INITDB_ROOT_USERNAME" \
-  -p "$MONGODB_INITDB_ROOT_PASSWORD" \
-  --db=edgev3 \
-  --collection=users \
-  --file=/docker-entrypoint-initdb.d/admin_user.json

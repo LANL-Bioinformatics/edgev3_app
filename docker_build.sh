@@ -10,26 +10,28 @@ build_and_save_if_missing() {
     local display_name="$5"
 
     if docker image inspect "$image_tag" >/dev/null 2>&1; then
-        echo "Image $image_tag already exists locally, skipping docker buildx and docker save"
-        return 0
+        echo "Image $image_tag already exists locally, skipping docker buildx"
+    else
+        docker buildx build --platform "$platform" -t "$image_tag" --load -f "$dockerfile" . || \
+          { echo "Docker build for $display_name failed"; exit 1; }
     fi
 
-    docker buildx build --platform "$platform" -t "$image_tag" --load -f "$dockerfile" . || \
-      { echo "Docker build for $display_name failed"; 
-        #exit 1; 
-      }
-    docker save "$image_tag" | pigz > "$archive"
+    if [[ -f "$archive" ]]; then
+        echo "Archive $archive already exists locally, skipping docker save"
+    else
+        docker save "$image_tag" | pigz > "$archive"
+    fi
 }
 
 docker_build() {
     # edgev3 
-    build_and_save_if_missing "edgev3:20260615" "linux/$ARCH" "docker_images/Dockerfile.edgev3" "docker_images/edgev3_20260615_$ARCH.tgz" "edgev3"
+    build_and_save_if_missing "edgev3:20260713" "linux/$ARCH" "docker_images/Dockerfile.edgev3" "docker_images/edgev3_20260713_$ARCH.tgz" "edgev3"
 
     # edgev3-nextflow
     build_and_save_if_missing "edgev3-nextflow:20260615" "linux/$ARCH" "docker_images/Dockerfile.edgev3-nextflow" "docker_images/edgev3-nextflow_20260615_$ARCH.tgz" "edgev3-nextflow"
 
     # mongodb
-    build_and_save_if_missing "edgev3-mongo:20260615" "linux/$ARCH" "docker_images/Dockerfile.edgev3-mongo" "docker_images/edgev3-mongo_20260615_$ARCH.tgz" "edgev3-mongo"
+    build_and_save_if_missing "edgev3-mongo:20260721" "linux/$ARCH" "docker_images/Dockerfile.edgev3-mongo" "docker_images/edgev3-mongo_20260721_$ARCH.tgz" "edgev3-mongo"
 
     # nginx
     if docker image inspect "nginx:latest" >/dev/null 2>&1; then
@@ -48,4 +50,3 @@ mkdir -p docker_images
 
 ARCH=amd64
 docker_build
-

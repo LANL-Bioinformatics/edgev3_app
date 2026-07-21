@@ -29,7 +29,9 @@ http://localhost:8080
 
 `init` imports required images when needed, resets Docker named volumes, and starts the stack. After the first initialization, use `check`, `start`, and `stop` for normal lifecycle management.
 
-On the first `init`, `start`, or `restart`, the helper generates MongoDB passwords and a JWT secret, creates `data/webapp_server.env` from its checked-in example, and inserts the app user's credentials into `DATABASE_HOST`. Existing secrets are reused on later starts.
+On the first `init`, `start`, or `restart`, the helper generates MongoDB passwords, an initial web-administrator password, a random account code, and a JWT secret. It also creates `data/webapp_server.env` from its checked-in example and inserts the MongoDB app user's credentials into `DATABASE_HOST`. Existing secrets are reused on later starts.
+
+The initial web login is `admin@my.edge`. Its generated password is stored locally at `data/secrets/edgev3_admin_password.txt` with owner-only permissions. Change the password through the web UI after the first login.
 
 ```bash
 ./edgev3_app.sh check
@@ -67,8 +69,9 @@ Logs from the helper script are appended to `logs/edgev3.log`. Application logs 
 | --- | --- | --- |
 | `edgev3_web` | `nginx:latest` | Public entry point on `localhost:8080`; proxies requests to `edgev3:5000` and serves a splash page while the app is unavailable. |
 | `edgev3` | `edgev3:20260713` | Main EDGEv3 web application. Builds the React client on startup, runs the Express API and cron monitor under PM2, executes workflows, and reads/writes mounted data. |
+| `edgev3_admin_init` | `edgev3:20260713` | One-shot initializer that bcrypt-hashes the generated web-admin password at runtime and creates or rotates the initial administrator before the app starts. |
 | `edgev3_nextflow` | `edgev3-nextflow:20260615` | Provides the shared `/opt/conda` runtime volume containing Nextflow and Apptainer tooling. |
-| `mongodb` | `edgev3-mongo:20260615` | MongoDB database initialized with local secret files and persisted in the `mongo_data` Docker volume. |
+| `mongodb` | `edgev3-mongo:20260721` | MongoDB database initialized with local secret files and persisted in the `mongo_data` Docker volume. |
 
 ## Important Paths
 
@@ -80,6 +83,7 @@ Logs from the helper script are appended to `logs/edgev3.log`. Application logs 
 | `docker_images/` | Dockerfiles and `.tgz` image archives used by the import flow. |
 | `src/edge-v3/` | EDGEv3 application source copied into the app image. |
 | `src/edgev3-mongo/` | MongoDB initialization assets used by the Mongo image. |
+| `src/edgev3-mongo/installation/init-edgev3-admin.js` | Runtime web-administrator initializer; contains no password or password hash. |
 | `data/web_nginx.conf` | Nginx reverse proxy configuration. |
 | `data/webapp_server.env.example` | Checked-in, non-secret template for the generated server environment. |
 | `data/webapp_server.env` | Generated, Git-ignored server settings containing the database connection, JWT, and optional provider keys. |
@@ -93,7 +97,10 @@ Logs from the helper script are appended to `logs/edgev3.log`. Application logs 
 ## Configuration Notes
 
 - MongoDB secrets and `data/webapp_server.env` are generated with owner-only permissions and are not tracked by Git. Back them up securely if the persisted `mongo_data` volume must be retained.
-- To rotate MongoDB credentials, remove all six files under `data/secrets/` and run `./edgev3_app.sh init`. The `init` command resets the MongoDB volume so it can be initialized with the new credentials. Do not delete only part of the secret set.
+- To rotate MongoDB credentials, remove all six `data/secrets/mongo_*.txt` files and run `./edgev3_app.sh init`. The `init` command resets the MongoDB volume so it can be initialized with the new credentials. Do not delete only part of the secret set.
+- The web-administrator password is generated separately in `edgev3_admin_password.txt`; no web password or bcrypt hash is included in the Mongo image. The accompanying `edgev3_admin_code.txt` is also random rather than a fixed `000000` value.
+- To rotate only the bootstrap web-administrator credential, remove both `data/secrets/edgev3_admin_*.txt` files and start the stack. The one-shot initializer updates `admin@my.edge` without resetting the MongoDB volume.
+- Once an administrator changes their password in the UI, ordinary restarts preserve that password. The initializer reapplies credentials only when the two bootstrap secret files change.
 - Add provider API keys only to the generated `data/webapp_server.env`; never add them to `data/webapp_server.env.example`.
 - Do not copy server-side provider keys into `data/webapp_client.env`; browser-visible configuration should only contain public feature flags and URLs.
 - `NEXTFLOW_EXECUTOR` defaults to `local` in `data/webapp_server.env`. Use the server environment file and the appropriate Nextflow config files if switching to another executor such as Slurm.
@@ -127,9 +134,9 @@ To rebuild the local image archives:
 
 The script builds:
 
-- `edgev3:20260615`
+- `edgev3:20260713`
 - `edgev3-nextflow:20260615`
-- `edgev3-mongo:20260615`
+- `edgev3-mongo:20260721`
 - `nginx:latest`
 
 The generated archives are written to `docker_images/` with the current architecture suffix.
@@ -138,7 +145,8 @@ The generated archives are written to `docker_images/` with the current architec
 
 - If the web UI shows the splash page, the Nginx container is running but `edgev3` is not ready or not reachable yet. Check `./edgev3_app.sh status` and `data/output/log/`.
 - If startup fails on ports, stop the process using the reported port or edit the host-side port mappings in `docker-compose.yaml`.
-- If MongoDB remains unhealthy, verify that all six secret files under `data/secrets/` exist. The helper deliberately stops when only part of the set is present.
+- If MongoDB remains unhealthy, verify that all six `mongo_*.txt` files under `data/secrets/` exist. The helper deliberately stops when only part of the set is present.
+- If `edgev3_admin_init` fails, verify that both `edgev3_admin_password.txt` and `edgev3_admin_code.txt` exist, then inspect its logs with `docker compose logs edgev3_admin_init`.
 - If workflow jobs fail to pull or run containers, check `data/container.config`, `data/local.config`, `data/refdata/nextflow/.apptainer`, Docker/Apptainer availability, and network access to the configured registries.
 
 ## License

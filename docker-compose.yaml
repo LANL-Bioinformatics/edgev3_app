@@ -24,7 +24,7 @@ services:
     volumes:
       - nextflowbinaries:/opt/conda
   edgev3_admin_init:
-    image: edgev3:20260713
+    image: edgev3:20260721
     platform: linux/amd64
     restart: "no"
     depends_on:
@@ -39,7 +39,7 @@ services:
       - ./src/edgev3-mongo/installation/init-edgev3-admin.js:/runtime/init-edgev3-admin.js:ro
     command: ["node", "/runtime/init-edgev3-admin.js"]
   edgev3:
-    image: edgev3:20260713
+    image: edgev3:20260721
     platform: linux/amd64
     security_opt:
       - seccomp=unconfined

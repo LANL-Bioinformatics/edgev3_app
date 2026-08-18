@@ -268,7 +268,10 @@ prepare_runtime_config() {
   for secret_name in "${secret_names[@]}" "${web_admin_secret_names[@]}"; do
     normalize_secret_file "$SECRETS_DIR/$secret_name"
   done
-  chmod 600 "$SECRETS_DIR"/*.txt
+  # Local Docker Compose implements file-backed secrets as bind mounts and
+  # preserves host ownership on Linux. Keep the directory private (0700), but
+  # allow the explicitly granted non-root containers to read each mounted file.
+  chmod 644 "$SECRETS_DIR"/*.txt
 
   mongo_app_user="$(tr -d '\r\n' < "$SECRETS_DIR/mongo_app_user.txt")"
   mongo_app_pass="$(tr -d '\r\n' < "$SECRETS_DIR/mongo_app_pass.txt")"

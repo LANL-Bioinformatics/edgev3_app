@@ -90,6 +90,13 @@ services:
     image: edgev3-mongo:20260818
     restart: always 
     platform: linux/amd64
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        export MONGODB_INITDB_ROOT_USERNAME="$$(cat /run/secrets/mongo_root_user)"
+        export MONGODB_INITDB_ROOT_PASSWORD="$$(cat /run/secrets/mongo_root_pass)"
+        exec python3 /usr/local/bin/docker-entrypoint.py mongod
     expose:
       - "27017"
     volumes:
@@ -102,14 +109,19 @@ services:
       - mongo_admin_user
       - mongo_admin_pass
     environment:
-      MONGODB_INITDB_ROOT_USERNAME_FILE: /run/secrets/mongo_root_user
-      MONGODB_INITDB_ROOT_PASSWORD_FILE: /run/secrets/mongo_root_pass
       MONGO_APP_USER_FILE: /run/secrets/mongo_app_user
       MONGO_APP_PASS_FILE: /run/secrets/mongo_app_pass
       MONGO_ADMIN_USER_FILE: /run/secrets/mongo_admin_user
       MONGO_ADMIN_PASS_FILE: /run/secrets/mongo_admin_pass
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet
+          --username "$$(cat /run/secrets/mongo_app_user)"
+          --password "$$(cat /run/secrets/mongo_app_pass)"
+          --authenticationDatabase admin
+          --eval "quit(db.adminCommand('ping').ok ? 0 : 1)"
       interval: 10s
       timeout: 5s
       retries: 5

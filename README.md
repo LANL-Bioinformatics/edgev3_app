@@ -96,7 +96,7 @@ Logs from the helper script are appended to `logs/edgev3.log`. Application logs 
 
 ## Configuration Notes
 
-- MongoDB secrets and `data/webapp_server.env` are generated with owner-only permissions and are not tracked by Git. Back them up securely if the persisted `mongo_data` volume must be retained.
+- `data/secrets/` is generated with owner-only directory permissions (`0700`). Its files are owner-writable and container-readable (`0644`) because local Docker Compose exposes file-backed secrets as bind mounts whose host ownership is preserved on Linux. `data/webapp_server.env` remains owner-only, and none of these files are tracked by Git. Back them up securely if the persisted `mongo_data` volume must be retained.
 - To rotate MongoDB credentials, remove all six `data/secrets/mongo_*.txt` files and run `./edgev3_app.sh init`. The `init` command resets the MongoDB volume so it can be initialized with the new credentials. Do not delete only part of the secret set.
 - The web-administrator password is generated separately in `edgev3_admin_password.txt`; no web password or bcrypt hash is included in the Mongo image. The accompanying `edgev3_admin_code.txt` is also random rather than a fixed `000000` value.
 - To rotate only the bootstrap web-administrator credential, remove both `data/secrets/edgev3_admin_*.txt` files and start the stack. The one-shot initializer updates `admin@my.edge` without resetting the MongoDB volume.

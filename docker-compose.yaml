@@ -24,7 +24,7 @@ services:
     volumes:
       - nextflowbinaries:/opt/conda
   edgev3_admin_init:
-    image: edgev3:20260721
+    image: edgev3:20260818
     platform: linux/amd64
     restart: "no"
     depends_on:

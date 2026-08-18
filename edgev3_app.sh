@@ -92,6 +92,22 @@ generate_random_hex() {
   fi
 }
 
+generate_random_web_admin_password() {
+  # Keep 128 bits of random entropy while guaranteeing every character class
+  # required by the EDGEv3 login form and API validators.
+  printf 'Aa1!%s' "$(generate_random_hex 16)"
+}
+
+web_admin_password_meets_policy() {
+  local password="$1"
+
+  [[ ${#password} -ge 8 ]] &&
+    [[ "$password" =~ [A-Z] ]] &&
+    [[ "$password" =~ [a-z] ]] &&
+    [[ "$password" =~ [0-9] ]] &&
+    [[ "$password" =~ [^A-Za-z0-9[:space:]] ]]
+}
+
 generate_random_six_digit_code() {
   local random_hex code
 
@@ -221,7 +237,7 @@ prepare_runtime_config() {
 
   if (( web_admin_existing_count == 0 )); then
     log "Generating the initial EDGEv3 web administrator credentials..."
-    edgev3_admin_password="$(generate_random_hex 16)"
+    edgev3_admin_password="$(generate_random_web_admin_password)"
     edgev3_admin_code="$(generate_random_six_digit_code)"
     (
       umask 077
@@ -235,7 +251,18 @@ prepare_runtime_config() {
     log "Restore the missing file, or remove both edgev3_admin_*.txt files and start again to rotate the bootstrap credential."
     exit 1
   else
-    log "Using existing EDGEv3 web administrator bootstrap credentials."
+    edgev3_admin_password="$(tr -d '\r\n' < "$SECRETS_DIR/edgev3_admin_password.txt")"
+    if web_admin_password_meets_policy "$edgev3_admin_password"; then
+      log "Using existing EDGEv3 web administrator bootstrap credentials."
+    else
+      log "Existing EDGEv3 web administrator password does not meet the current password policy; rotating it."
+      edgev3_admin_password="$(generate_random_web_admin_password)"
+      (
+        umask 077
+        printf '%s' "$edgev3_admin_password" > "$SECRETS_DIR/edgev3_admin_password.txt"
+      )
+      log "Updated admin password saved to $SECRETS_DIR/edgev3_admin_password.txt"
+    fi
   fi
 
   for secret_name in "${secret_names[@]}" "${web_admin_secret_names[@]}"; do

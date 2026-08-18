@@ -39,8 +39,9 @@ services:
       - ./src/edgev3-mongo/installation/init-edgev3-admin.js:/runtime/init-edgev3-admin.js:ro
     command: ["node", "/runtime/init-edgev3-admin.js"]
   edgev3:
-    image: edgev3:20260721
+    image: edgev3:20260818
     platform: linux/amd64
+    init: true
     security_opt:
       - seccomp=unconfined
       - systempaths=unconfined
@@ -86,7 +87,7 @@ services:
       #- ./data/nextflow.config:/edgev3/workflows/Nextflow/metagenomics/nextflow/nextflow.config
       - ./data/refdata:/project/refdata
   mongodb:
-    image: edgev3-mongo:20260721
+    image: edgev3-mongo:20260818
     restart: always 
     platform: linux/amd64
     expose:

@@ -283,8 +283,8 @@ prepare_runtime_config() {
 IMAGES=(
     "nginx nginx_latest_$ARCH.tgz latest"
     "edgev3-nextflow edgev3-nextflow_20260721_$ARCH.tgz 20260721"
-    "edgev3 edgev3_20260721_$ARCH.tgz 20260721"
-    "edgev3-mongo edgev3-mongo_20260721_$ARCH.tgz 20260721"
+    "edgev3 edgev3_20260818_$ARCH.tgz 20260818"
+    "edgev3-mongo edgev3-mongo_20260818_$ARCH.tgz 20260818"
 )
 
 ############################

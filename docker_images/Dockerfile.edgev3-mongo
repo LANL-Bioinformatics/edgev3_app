@@ -1,6 +1,8 @@
 FROM mongodb/mongodb-community-server:7.0.0-ubuntu2204@sha256:3b15bc703c3038b69d8baa8b2725cbb42dfa43c238912de05b29c666f1d5e767
 LABEL maintainer="chienchi@lanl.gov"
 
-COPY --chown=mongodb:mongodb --chmod=0555 ./src/edgev3-mongo/installation/init-mongo-users.sh /docker-entrypoint-initdb.d/init-mongo-users.sh
+USER root
+RUN install -d -o mongodb -g mongodb -m 0550 /docker-entrypoint-initdb.d
+COPY --chown=mongodb:mongodb --chmod=0550 ./src/edgev3-mongo/installation/init-mongo-users.sh /docker-entrypoint-initdb.d/init-mongo-users.sh
 
-USER mongodb
+USER mongodb:mongodb

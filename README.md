@@ -61,7 +61,7 @@ Logs from the helper script are appended to `logs/edgev3.log`. Application logs 
 
 ## Architecture And Data Flow
 
-![Flowchart](flowchart2.png)
+![Flowchart](images/flowchart2.png)
 
 ### Compose Services
 

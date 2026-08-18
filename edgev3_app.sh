@@ -133,6 +133,28 @@ set_env_value() {
   mv "$tmp_file" "$file"
 }
 
+normalize_secret_file() {
+  local file="$1"
+  local value tmp_file
+
+  # mongodb/mongodb-community-server's Python entrypoint reads *_FILE values
+  # verbatim. A trailing newline therefore becomes part of the MongoDB
+  # username/password and causes SCRAM user creation to fail.
+  value="$(tr -d '\r\n' < "$file")"
+  if [[ -z "$value" ]]; then
+    log "FATAL: Runtime secret is empty after normalization: $file"
+    exit 1
+  fi
+
+  tmp_file="${file}.tmp.$$"
+  (
+    umask 077
+    printf '%s' "$value" > "$tmp_file"
+  )
+  chmod 600 "$tmp_file"
+  mv "$tmp_file" "$file"
+}
+
 prepare_runtime_config() {
   local -a secret_names=(
     mongo_root_user.txt
@@ -175,12 +197,12 @@ prepare_runtime_config() {
     mongo_admin_pass="$(generate_random_hex 32)"
     (
       umask 077
-      printf '%s\n' 'root' > "$SECRETS_DIR/mongo_root_user.txt"
-      printf '%s\n' "$mongo_root_pass" > "$SECRETS_DIR/mongo_root_pass.txt"
-      printf '%s\n' 'edgev3_app' > "$SECRETS_DIR/mongo_app_user.txt"
-      printf '%s\n' "$mongo_app_pass" > "$SECRETS_DIR/mongo_app_pass.txt"
-      printf '%s\n' 'edgev3_admin' > "$SECRETS_DIR/mongo_admin_user.txt"
-      printf '%s\n' "$mongo_admin_pass" > "$SECRETS_DIR/mongo_admin_pass.txt"
+      printf '%s' 'root' > "$SECRETS_DIR/mongo_root_user.txt"
+      printf '%s' "$mongo_root_pass" > "$SECRETS_DIR/mongo_root_pass.txt"
+      printf '%s' 'edgev3_app' > "$SECRETS_DIR/mongo_app_user.txt"
+      printf '%s' "$mongo_app_pass" > "$SECRETS_DIR/mongo_app_pass.txt"
+      printf '%s' 'edgev3_admin' > "$SECRETS_DIR/mongo_admin_user.txt"
+      printf '%s' "$mongo_admin_pass" > "$SECRETS_DIR/mongo_admin_pass.txt"
     )
   elif (( existing_count != ${#secret_names[@]} )); then
     log "FATAL: MongoDB secrets are only partially initialized."
@@ -203,8 +225,8 @@ prepare_runtime_config() {
     edgev3_admin_code="$(generate_random_six_digit_code)"
     (
       umask 077
-      printf '%s\n' "$edgev3_admin_password" > "$SECRETS_DIR/edgev3_admin_password.txt"
-      printf '%s\n' "$edgev3_admin_code" > "$SECRETS_DIR/edgev3_admin_code.txt"
+      printf '%s' "$edgev3_admin_password" > "$SECRETS_DIR/edgev3_admin_password.txt"
+      printf '%s' "$edgev3_admin_code" > "$SECRETS_DIR/edgev3_admin_code.txt"
     )
     log "Initial admin login: admin@my.edge"
     log "Initial admin password saved to $SECRETS_DIR/edgev3_admin_password.txt"
@@ -216,6 +238,9 @@ prepare_runtime_config() {
     log "Using existing EDGEv3 web administrator bootstrap credentials."
   fi
 
+  for secret_name in "${secret_names[@]}" "${web_admin_secret_names[@]}"; do
+    normalize_secret_file "$SECRETS_DIR/$secret_name"
+  done
   chmod 600 "$SECRETS_DIR"/*.txt
 
   mongo_app_user="$(tr -d '\r\n' < "$SECRETS_DIR/mongo_app_user.txt")"

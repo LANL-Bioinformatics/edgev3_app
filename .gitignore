@@ -2,3 +2,9 @@
 **/.*
 data/secrets/
 data/webapp_server.env
+data/output/log/*.log
+data/output/projects
+logs/*log
+docker_images/*tgz
+images/flowchart.png
+images/flowchart3.png

@@ -61,18 +61,45 @@ Logs from the helper script are appended to `logs/edgev3.log`. Application logs 
 
 ## Architecture And Data Flow
 
-![Flowchart](images/flowchart2.png)
+```mermaid
+flowchart LR
+    browser["User browser"] -->|"HTTP :8080"| web["edgev3_web<br/>nginx:latest<br/>host 8080 -> container 80"]
+    web -->|"reverse proxy<br/>edgev3:5000"| app["edgev3<br/>edgev3:20260818<br/>React build + Express API<br/>PM2 appserver x4 + cronserver"]
+
+    secrets["data/secrets/*.txt<br/>Docker secrets"] --> mongo["mongodb<br/>edgev3-mongo:20260818<br/>MongoDB 7"]
+    secrets --> adminInit["edgev3_admin_init<br/>edgev3:20260818<br/>admin bootstrap"]
+    mongo -->|"database files"| mongoVol[("mongo_data<br/>/data/db")]
+    mongo -. "healthy" .-> adminInit
+    adminInit -->|"create or rotate<br/>admin@my.edge"| mongo
+
+    dataInit["edgev3_data_init<br/>edgev3:20260818<br/>runtime permissions"] -->|"chown/chmod"| output["data/output/*<br/>/edgev3/io/*"]
+    adminInit -. "completed" .-> app
+    dataInit -. "completed" .-> app
+    mongo -. "healthy" .-> app
+
+    nextflow["edgev3_nextflow<br/>edgev3-nextflow:20260721"] -->|"shares conda/Nextflow/<br/>Apptainer runtime"| nfVol[("nextflowbinaries<br/>/opt/conda")]
+    nfVol --> app
+
+    config["runtime config<br/>data/secrets/webapp_server.env<br/>data/webapp_client.env<br/>data/container.config<br/>data/local.config"] --> app
+    app -->|"metadata, users,<br/>project state"| mongo
+    app -->|"uploads, results,<br/>public files, logs, DB backups"| output
+    app -->|"reference data +<br/>Apptainer cache"| refdata["data/refdata<br/>/project/refdata"]
+    app -->|"workflow definitions"| workflows["/edgev3/workflows/Nextflow<br/>metagenomics pipelines"]
+    workflows -->|"run jobs using configured executor<br/>default: local"| output
+    workflows -->|"container image names from<br/>data/container.config"| containers["Workflow containers<br/>GHCR / Docker registries"]
+    containers -->|"pulled/cached as Apptainer images"| refdata
+```
 
 ### Compose Services
 
 | Service | Image | Role |
 | --- | --- | --- |
 | `edgev3_web` | `nginx:latest` | Public entry point on `localhost:8080`; proxies requests to `edgev3:5000` and serves a splash page while the app is unavailable. |
-| `edgev3` | `edgev3:20260713` | Main EDGEv3 web application. Builds the React client on startup, runs the Express API and cron monitor under PM2, executes workflows, and reads/writes mounted data. |
-| `edgev3_admin_init` | `edgev3:20260713` | One-shot initializer that bcrypt-hashes the generated web-admin password at runtime and creates or rotates the initial administrator before the app starts. |
+| `edgev3` | `edgev3:20260818` | Main EDGEv3 web application. Builds the React client on startup, runs the Express API and cron monitor under PM2, executes workflows, and reads/writes mounted data. |
+| `edgev3_admin_init` | `edgev3:20260818` | One-shot initializer that bcrypt-hashes the generated web-admin password at runtime and creates or rotates the initial administrator before the app starts. |
 | `edgev3_data_init` | `edgev3:20260818` | One-shot initializer that makes bind-mounted runtime output writable by the non-root EDGE process. |
-| `edgev3_nextflow` | `edgev3-nextflow:20260615` | Provides the shared `/opt/conda` runtime volume containing Nextflow and Apptainer tooling. |
-| `mongodb` | `edgev3-mongo:20260721` | MongoDB database initialized with local secret files and persisted in the `mongo_data` Docker volume. |
+| `edgev3_nextflow` | `edgev3-nextflow:20260721` | Provides the shared `/opt/conda` runtime volume containing Nextflow and Apptainer tooling. |
+| `mongodb` | `edgev3-mongo:20260818` | MongoDB database initialized with local secret files and persisted in the `mongo_data` Docker volume. |
 
 ## Important Paths
 
@@ -91,6 +118,7 @@ Logs from the helper script are appended to `logs/edgev3.log`. Application logs 
 | `data/webapp_client.env` | Client-side feature flags and Vite settings. |
 | `data/container.config` | Nextflow/Apptainer container mapping for individual workflow stages. |
 | `data/local.config` | Nextflow local process configuration. |
+| [`docs/Required_DATA.md`](docs/Required_DATA.md) | Required local bundle files, generated runtime data, and reference-data paths for workflow modules. |
 | `data/secrets/` | Generated, Git-ignored MongoDB usernames/passwords mounted as Docker secrets. |
 | `data/output/` | Persistent bind-mounted workspace for projects, uploads, public files, logs, SRA data, bulk submissions, and database backups. |
 | `data/refdata/` | Reference data and Nextflow/Apptainer cache mount. |
@@ -107,6 +135,7 @@ Logs from the helper script are appended to `logs/edgev3.log`. Application logs 
 - `NEXTFLOW_EXECUTOR` defaults to `local` in `data/secrets/webapp_server.env`. Use the server environment file and the appropriate Nextflow config files if switching to another executor such as Slurm.
 - Workflow container image selections live in `data/container.config`, which is mounted over the in-image Nextflow metagenomics container config.
 - Workflow local process configuration live in `data/local.config`, which is mounted over the in-image Nextflow metagenomics config.
+- Required runtime and reference data are summarized in [`docs/Required_DATA.md`](docs/Required_DATA.md).
 
 ## Data Persistence
 
@@ -116,6 +145,8 @@ The stack uses both Docker named volumes and host bind mounts:
 - `nextflowbinaries` shares the Nextflow/Apptainer conda environment at `/opt/conda`.
 - `data/output/*` stores user-facing application state, uploaded inputs, results, logs, public files, and database backups on the host.
 - `data/refdata` stores reference data and workflow container cache content on the host.
+
+For the complete data checklist, see [`docs/Required_DATA.md`](docs/Required_DATA.md).
 
 Be careful with:
 
@@ -135,9 +166,9 @@ To rebuild the local image archives:
 
 The script builds:
 
-- `edgev3:20260713`
-- `edgev3-nextflow:20260615`
-- `edgev3-mongo:20260721`
+- `edgev3:20260818`
+- `edgev3-nextflow:20260721`
+- `edgev3-mongo:20260818`
 - `nginx:latest`
 
 The generated archives are written to `docker_images/` with the current architecture suffix.

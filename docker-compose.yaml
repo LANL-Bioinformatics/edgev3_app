@@ -38,6 +38,29 @@ services:
     volumes:
       - ./src/edgev3-mongo/installation/init-edgev3-admin.js:/runtime/init-edgev3-admin.js:ro
     command: ["node", "/runtime/init-edgev3-admin.js"]
+  edgev3_data_init:
+    image: edgev3:20260818
+    platform: linux/amd64
+    user: "0:0"
+    restart: "no"
+    environment:
+      EDGEV3_HOST_GID: "${EDGEV3_HOST_GID:-1000}"
+    volumes:
+      - ./data/output/projects:/edgev3/io/projects
+      - ./data/output/db:/edgev3/io/db
+      - ./data/output/log:/edgev3/io/log
+      - ./data/output/public:/edgev3/io/public
+      - ./data/output/sra:/edgev3/io/sra
+      - ./data/output/upload:/edgev3/io/upload
+      - ./data/output/bulksubmissions:/edgev3/io/bulksubmissions
+    command:
+      - /bin/sh
+      - -c
+      - |
+        runtime_paths="/edgev3/io/projects /edgev3/io/db /edgev3/io/log /edgev3/io/public /edgev3/io/sra /edgev3/io/upload /edgev3/io/bulksubmissions"
+        chown -R "1000:$${EDGEV3_HOST_GID}" $${runtime_paths}
+        find $${runtime_paths} -type d -exec chmod 2770 {} \;
+        find $${runtime_paths} -type f -exec chmod 0660 {} \;
   edgev3:
     image: edgev3:20260818
     platform: linux/amd64
@@ -57,8 +80,11 @@ services:
       - /bin/sh
       - -c
       - | 
-        cd /edgev3/webapp/client/; npm run build;   
-        pm2 resurrect; pm2 reload all --update-env && tail -f /dev/null
+        set -e
+        cd /edgev3/webapp/client/
+        npm run build
+        cd /edgev3
+        exec pm2-runtime pm2.config.js
       ## set up jbrowse in projects dir
       ## rebuild the client site since the bind client .env
       ## start the node server and front end mode
@@ -69,11 +95,13 @@ services:
         condition: service_healthy
       edgev3_admin_init:
         condition: service_completed_successfully
+      edgev3_data_init:
+        condition: service_completed_successfully
     ports:
       - "5000:5000"
     volumes:
-      - ./data/webapp_server.env:/edgev3/webapp/server/.env
-      - ./data/webapp_client.env:/edgev3/webapp/client/.env
+      - ./data/secrets/webapp_server.env:/edgev3/webapp/server/.env:ro
+      - ./data/webapp_client.env:/edgev3/webapp/client/.env:ro
       - nextflowbinaries:/opt/conda
       - ./data/output/projects:/edgev3/io/projects
       - ./data/output/db:/edgev3/io/db
@@ -86,6 +114,12 @@ services:
       - ./data/local.config:/edgev3/workflows/Nextflow/metagenomics/configs/local.config
       #- ./data/nextflow.config:/edgev3/workflows/Nextflow/metagenomics/nextflow/nextflow.config
       - ./data/refdata:/project/refdata
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent --show-error http://127.0.0.1:5000/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 120s
   mongodb:
     image: edgev3-mongo:20260818
     restart: always 

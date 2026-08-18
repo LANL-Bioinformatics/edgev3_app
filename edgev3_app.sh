@@ -12,8 +12,10 @@ IMAGES_DIR="$APP_DIR/docker_images"
 LOG_DIR="$APP_DIR/logs"
 LOG_FILE="$LOG_DIR/edgev3.log"
 SECRETS_DIR="$APP_DIR/data/secrets"
-SERVER_ENV_FILE="$APP_DIR/data/webapp_server.env"
+SERVER_ENV_FILE="$SECRETS_DIR/webapp_server.env"
+LEGACY_SERVER_ENV_FILE="$APP_DIR/data/webapp_server.env"
 SERVER_ENV_TEMPLATE="$APP_DIR/data/webapp_server.env.example"
+CLIENT_ENV_FILE="$APP_DIR/data/webapp_client.env"
 
 mkdir -p "$LOG_DIR"
 exec > >(tee -a "$LOG_FILE") 2>&1
@@ -66,6 +68,9 @@ fi
 
 # Export default platform for docker commands
 export DOCKER_DEFAULT_PLATFORM="linux/$ARCH"
+# The EDGE container runs as UID 1000. The data initializer uses the invoking
+# user's primary group so generated output remains manageable from the host.
+export EDGEV3_HOST_GID="$(id -g)"
 
 ############################
 # Helpers
@@ -199,6 +204,11 @@ prepare_runtime_config() {
   mkdir -p "$SECRETS_DIR"
   chmod 700 "$SECRETS_DIR"
 
+  if [[ ! -e "$SERVER_ENV_FILE" && -f "$LEGACY_SERVER_ENV_FILE" ]]; then
+    log "Moving the server environment into the private secrets directory..."
+    mv "$LEGACY_SERVER_ENV_FILE" "$SERVER_ENV_FILE"
+  fi
+
   for secret_name in "${secret_names[@]}"; do
     secret_path="$SECRETS_DIR/$secret_name"
     if [[ -s "$secret_path" ]]; then
@@ -303,7 +313,13 @@ prepare_runtime_config() {
     "DATABASE_HOST" \
     "$mongo_app_user:$mongo_app_pass@mongodb" \
     "$SERVER_ENV_FILE"
-  chmod 600 "$SERVER_ENV_FILE"
+  [[ -f "$CLIENT_ENV_FILE" ]] || {
+    log "FATAL: Missing client environment file $CLIENT_ENV_FILE"
+    exit 1
+  }
+  # These files are bind-mounted into a container running under a different
+  # UID on Linux. The server file remains protected by SECRETS_DIR (0700).
+  chmod 644 "$SERVER_ENV_FILE" "$CLIENT_ENV_FILE"
   log "Server DATABASE_HOST is synchronized with the MongoDB app credentials."
 }
 

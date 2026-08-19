@@ -1,2 +1,0 @@
-name	status	start	complete	duration
-COUNTFASTQ:countFastq (1)	FAILED	2026-06-17 16:42:06.371	2026-06-17 16:42:07.071	769ms

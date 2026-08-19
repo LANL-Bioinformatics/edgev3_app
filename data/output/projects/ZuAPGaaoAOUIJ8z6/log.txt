@@ -1,3 +1,0 @@
-Generate nextflow.config
-[6/17/2026, 4:16:00 PM] Submit workflow to nextflow
-Nextflow job status: failed

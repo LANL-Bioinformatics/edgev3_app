@@ -19,12 +19,59 @@ services:
       done &
       nginx -g "daemon off;"
   edgev3_nextflow:
-    image: edgev3-nextflow:20260721
+    image: edgev3-nextflow:20260908
     platform: linux/amd64
+    user: "1000:${EDGEV3_HOST_GID:-1000}"
+    init: true
+    restart: always
+    security_opt:
+      - seccomp=unconfined
+      - systempaths=unconfined
+    devices:
+      - /dev/fuse:/dev/fuse
+    environment:
+      # The runner library is generic; the tool is 'nextflow'. The service name
+      # (edgev3_nextflow) is what the webapp's NEXTFLOW_RUNNER_NAME must match.
+      RUNNER_TOOL: nextflow
+      RUNNER_PORT: 7001
+      RUNNER_ALLOWED_ROOTS: /edgev3/io:/edgev3/workflows:/project/refdata
+      RUNNER_STATE_DB: /edgev3/io/job_runner/jobs.sqlite3
+      RUNNER_CONCURRENCY: "${NEXTFLOW_RUNNER_CONCURRENCY:-1}"
+      RUNNER_API_TOKEN_FILE: /run/secrets/nextflow_runner_token
+      NEXTFLOW_EXEC: /opt/conda/envs/edgev3/bin/nextflow
+      NEXTFLOW_SLURM_SSH: "${NEXTFLOW_SLURM_SSH:-}"
+      NEXTFLOW_REMOTE_EXEC: "${NEXTFLOW_REMOTE_EXEC:-nextflow}"
+    depends_on:
+      edgev3_data_init:
+        condition: service_completed_successfully
+    expose:
+      - "7001"
+    secrets:
+      - nextflow_runner_token
     volumes:
-      - nextflowbinaries:/opt/conda
+      - ./data/output/projects:/edgev3/io/projects
+      - ./data/output/db:/edgev3/io/db
+      - ./data/output/log:/edgev3/io/log
+      - ./data/output/public:/edgev3/io/public
+      - ./data/output/sra:/edgev3/io/sra
+      - ./data/output/upload:/edgev3/io/upload
+      - ./data/output/bulksubmissions:/edgev3/io/bulksubmissions
+      - ./data/output/job_runner:/edgev3/io/job_runner
+      - ./data/container.config:/edgev3/workflows/Nextflow/metagenomics/configs/container.config:ro
+      - ./data/local.config:/edgev3/workflows/Nextflow/metagenomics/configs/local.config:ro
+      - ./data/refdata:/project/refdata
+    healthcheck:
+      test:
+        - CMD
+        - /opt/conda/envs/edgev3/bin/python
+        - -c
+        - import json,urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:7001/health', timeout=3)); raise SystemExit(0 if data.get('status') == 'ok' else 1)
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
   edgev3_admin_init:
-    image: edgev3:20260818
+    image: edgev3:20260908
     platform: linux/amd64
     restart: "no"
     depends_on:
@@ -39,7 +86,7 @@ services:
       - ./src/edgev3-mongo/installation/init-edgev3-admin.js:/runtime/init-edgev3-admin.js:ro
     command: ["node", "/runtime/init-edgev3-admin.js"]
   edgev3_data_init:
-    image: edgev3:20260818
+    image: edgev3:20260908
     platform: linux/amd64
     user: "0:0"
     restart: "no"
@@ -53,29 +100,20 @@ services:
       - ./data/output/sra:/edgev3/io/sra
       - ./data/output/upload:/edgev3/io/upload
       - ./data/output/bulksubmissions:/edgev3/io/bulksubmissions
+      - ./data/output/job_runner:/edgev3/io/job_runner
     command:
       - /bin/sh
       - -c
       - |
-        runtime_paths="/edgev3/io/projects /edgev3/io/db /edgev3/io/log /edgev3/io/public /edgev3/io/sra /edgev3/io/upload /edgev3/io/bulksubmissions"
+        runtime_paths="/edgev3/io/projects /edgev3/io/db /edgev3/io/log /edgev3/io/public /edgev3/io/sra /edgev3/io/upload /edgev3/io/bulksubmissions /edgev3/io/job_runner"
         chown -R "1000:$${EDGEV3_HOST_GID}" $${runtime_paths}
         find $${runtime_paths} -type d -exec chmod 2770 {} \;
         find $${runtime_paths} -type f -exec chmod 0660 {} \;
   edgev3:
-    image: edgev3:20260818
+    image: edgev3:20260908
     platform: linux/amd64
     init: true
-    security_opt:
-      - seccomp=unconfined
-      - systempaths=unconfined
-    devices:
-      - /dev/fuse:/dev/fuse
     restart: always 
-    environment:
-      - PATH=/opt/conda/envs/edgev3/bin:${PATH}
-      - LD_LIBRARY_PATH=/opt/conda/envs/edgev3/lib
-      #- PYTHONPATH=/opt/conda/envs/edgev3/lib/python3.8/site-packages:${PYTHONPATH}
-     #- PERL5LIB=/opt/conda/envs/edgev3/lib/perl5/site_perl:/opt/conda/envs/edgev3/lib/perl5/vendor_perl:${PERL5LIB}
     command:
       - /bin/sh
       - -c
@@ -97,12 +135,15 @@ services:
         condition: service_completed_successfully
       edgev3_data_init:
         condition: service_completed_successfully
+      edgev3_nextflow:
+        condition: service_healthy
     ports:
       - "5000:5000"
+    secrets:
+      - nextflow_runner_token
     volumes:
       - ./data/secrets/webapp_server.env:/edgev3/webapp/server/.env:ro
       - ./data/webapp_client.env:/edgev3/webapp/client/.env:ro
-      - nextflowbinaries:/opt/conda
       - ./data/output/projects:/edgev3/io/projects
       - ./data/output/db:/edgev3/io/db
       - ./data/output/log:/edgev3/io/log
@@ -177,7 +218,8 @@ secrets:
     file: ./data/secrets/edgev3_admin_password.txt
   edgev3_admin_code:
     file: ./data/secrets/edgev3_admin_code.txt
+  nextflow_runner_token:
+    file: ./data/secrets/nextflow_runner_token.txt
 
 volumes:
-  nextflowbinaries:
   mongo_data:

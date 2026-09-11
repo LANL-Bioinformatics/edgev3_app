@@ -1,9 +1,12 @@
 .DS_Store
+**/__pycache__/
 **/.*
+!.env.example
 data/secrets/
 data/webapp_server.env
 data/output/log/*.log
 data/output/projects
+data/output/job_runner
 logs/*log
 docker_images/*tgz
 images/flowchart.png

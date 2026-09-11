@@ -7,10 +7,19 @@ ENV LANG=C.UTF-8 \
 
 USER root
 RUN apt-get -y update \
-    && apt-get -y install --no-install-recommends vim libz-dev liblmdb-dev \
+    && apt-get -y install --no-install-recommends ca-certificates openssh-client vim libz-dev liblmdb-dev \
+    && groupmod --gid 1000 mambauser \
+    && usermod --uid 1000 --gid 1000 mambauser \
+    && chown -R mambauser:mambauser /home/mambauser \
     && apt-get autoremove -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# The shared runner library ships with edge-core; this app supplies only its
+# own tool definition.
+COPY --chown=mambauser:mambauser ./src/edge-v3/job_runner/ /opt/edgev3-job-runner/lib/
+COPY --chown=mambauser:mambauser ./src/job_runner/job_runner.py /opt/edgev3-job-runner/job_runner.py
+COPY --chown=mambauser:mambauser ./src/edge-v3/workflows/ /edgev3/workflows/
 
 USER mambauser:mambauser
 
@@ -19,9 +28,21 @@ RUN micromamba create --name "${ENV_NAME}" --yes -c conda-forge -c bioconda pyth
     && micromamba clean --all -y \
     && echo "micromamba activate ${ENV_NAME}" >> "${HOME}/.bashrc"
 
+# The job-runner library serves its API with FastAPI. Runtime only: the test
+# dependency is intentionally excluded from the image.
+RUN /opt/conda/envs/${ENV_NAME}/bin/pip install --no-cache-dir \
+      "fastapi~=0.115" "uvicorn~=0.30"
+
 ENV PATH="/opt/conda/envs/${ENV_NAME}/bin:${PATH}" \
-    LD_LIBRARY_PATH="/opt/conda/envs/${ENV_NAME}/lib"
+    LD_LIBRARY_PATH="/opt/conda/envs/${ENV_NAME}/lib" \
+    PYTHONUNBUFFERED=1 \
+    RUNNER_TOOL=nextflow \
+    RUNNER_PORT=7001 \
+    NEXTFLOW_EXEC=/opt/conda/envs/edgev3/bin/nextflow \
+    EDGE_JOB_RUNNER_LIB=/opt/edgev3-job-runner/lib
 
-WORKDIR /opt/conda/envs/${ENV_NAME}
+WORKDIR /edgev3
 
-CMD ["tail", "-f", "/dev/null"]
+EXPOSE 7001
+
+CMD ["/opt/conda/envs/edgev3/bin/python", "/opt/edgev3-job-runner/job_runner.py"]

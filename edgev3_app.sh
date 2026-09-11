@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_NAME="$(basename "$0")"
-SCRIPT_VERSION="2026.07.21"
+SCRIPT_VERSION="2026.09.08"
 
 ############################
 # Paths & logging
@@ -154,6 +154,29 @@ set_env_value() {
   mv "$tmp_file" "$file"
 }
 
+set_env_default() {
+  local key="$1"
+  local value="$2"
+  local file="$3"
+
+  if ! awk -F= -v key="$key" '$1 == key { found = 1 } END { exit !found }' "$file"; then
+    set_env_value "$key" "$value" "$file"
+  fi
+}
+
+get_env_value() {
+  local key="$1"
+  local file="$2"
+
+  awk -F= -v key="$key" '
+    index($0, key "=") == 1 {
+      print substr($0, index($0, "=") + 1)
+      exit
+    }
+  ' "$file"
+}
+
+
 normalize_secret_file() {
   local file="$1"
   local value tmp_file
@@ -195,6 +218,7 @@ prepare_runtime_config() {
   local mongo_root_pass mongo_app_user mongo_app_pass mongo_admin_pass
   local edgev3_admin_password edgev3_admin_code
   local jwt_secret current_jwt
+  local runner_token_path runner_token
 
   if $DRY_RUN; then
     log "[DRY-RUN] Would create missing runtime secrets and synchronize $SERVER_ENV_FILE"
@@ -275,7 +299,19 @@ prepare_runtime_config() {
     fi
   fi
 
-  for secret_name in "${secret_names[@]}" "${web_admin_secret_names[@]}"; do
+  runner_token_path="$SECRETS_DIR/nextflow_runner_token.txt"
+  if [[ ! -s "$runner_token_path" ]]; then
+    log "Generating the Nextflow runner API token..."
+    runner_token="$(generate_random_hex 32)"
+    (
+      umask 077
+      printf '%s' "$runner_token" > "$runner_token_path"
+    )
+  else
+    log "Using the existing Nextflow runner API token."
+  fi
+
+  for secret_name in "${secret_names[@]}" "${web_admin_secret_names[@]}" nextflow_runner_token.txt; do
     normalize_secret_file "$SECRETS_DIR/$secret_name"
   done
   # Local Docker Compose implements file-backed secrets as bind mounts and
@@ -285,9 +321,8 @@ prepare_runtime_config() {
 
   mongo_app_user="$(tr -d '\r\n' < "$SECRETS_DIR/mongo_app_user.txt")"
   mongo_app_pass="$(tr -d '\r\n' < "$SECRETS_DIR/mongo_app_pass.txt")"
-  if [[ ! "$mongo_app_user" =~ ^[A-Za-z0-9._~-]+$ ]] ||
-     [[ ! "$mongo_app_pass" =~ ^[A-Za-z0-9._~-]+$ ]]; then
-    log "FATAL: MongoDB app credentials contain characters that are unsafe in DATABASE_HOST."
+  if [[ -z "$mongo_app_user" || -z "$mongo_app_pass" ]]; then
+    log "FATAL: MongoDB app credentials are empty."
     exit 1
   fi
 
@@ -309,9 +344,64 @@ prepare_runtime_config() {
     set_env_value "JWT_SECRET" "$jwt_secret" "$SERVER_ENV_FILE"
   fi
 
-  set_env_value \
+  # Older releases embedded credentials directly in DATABASE_HOST
+  # (user:pass@mongodb) and appended ?authSource=admin to DB_NAME instead of
+  # using the dedicated DATABASE_USERNAME/DATABASE_PASSWORD variables. Strip
+  # those legacy values on upgrade so they don't shadow the new ones below.
+  local existing_db_host existing_db_name
+  existing_db_host="$(get_env_value "DATABASE_HOST" "$SERVER_ENV_FILE")"
+  existing_db_host="${existing_db_host%\"}"
+  existing_db_host="${existing_db_host#\"}"
+  if [[ "$existing_db_host" == *@* ]]; then
+    log "Migrating legacy DATABASE_HOST with embedded credentials to DATABASE_USERNAME/DATABASE_PASSWORD."
+    set_env_value "DATABASE_HOST" "mongodb" "$SERVER_ENV_FILE"
+  fi
+  existing_db_name="$(get_env_value "DB_NAME" "$SERVER_ENV_FILE")"
+  existing_db_name="${existing_db_name%\"}"
+  existing_db_name="${existing_db_name#\"}"
+  if [[ "$existing_db_name" == *\?authSource=* ]]; then
+    log "Migrating legacy DB_NAME with embedded authSource to DATABASE_USERNAME/DATABASE_PASSWORD."
+    set_env_value "DB_NAME" "${existing_db_name%%\?*}" "$SERVER_ENV_FILE"
+  fi
+
+  set_env_default \
     "DATABASE_HOST" \
-    "$mongo_app_user:$mongo_app_pass@mongodb" \
+    "mongodb" \
+    "$SERVER_ENV_FILE"
+  set_env_default \
+    "DB_NAME" \
+    "edgev3" \
+    "$SERVER_ENV_FILE"
+  set_env_value \
+    "DATABASE_USERNAME" \
+    "$mongo_app_user" \
+    "$SERVER_ENV_FILE"
+  set_env_value \
+    "DATABASE_PASSWORD" \
+    "$mongo_app_pass" \
+    "$SERVER_ENV_FILE"
+  set_env_default \
+    "NEXTFLOW_RUNNER_API_BASE_URL" \
+    "http://edgev3_nextflow:7001/v1" \
+    "$SERVER_ENV_FILE"
+  set_env_default \
+    "NEXTFLOW_RUNNER_API_TOKEN_FILE" \
+    "/run/secrets/nextflow_runner_token" \
+    "$SERVER_ENV_FILE"
+  set_env_default \
+    "NEXTFLOW_RUNNER_API_TIMEOUT_MS" \
+    "10000" \
+    "$SERVER_ENV_FILE"
+  # The web server image does not ship the nextflow CLI, so workflows must be
+  # submitted to the edgev3_nextflow job runner rather than executed in-process.
+  set_env_default \
+    "NEXTFLOW_MODE" \
+    "runner" \
+    "$SERVER_ENV_FILE"
+  # Name the runner is registered under; must match RUNNER_TOOL in Compose.
+  set_env_default \
+    "NEXTFLOW_RUNNER_NAME" \
+    "edgev3_nextflow" \
     "$SERVER_ENV_FILE"
   [[ -f "$CLIENT_ENV_FILE" ]] || {
     log "FATAL: Missing client environment file $CLIENT_ENV_FILE"
@@ -320,7 +410,7 @@ prepare_runtime_config() {
   # These files are bind-mounted into a container running under a different
   # UID on Linux. The server file remains protected by SECRETS_DIR (0700).
   chmod 644 "$SERVER_ENV_FILE" "$CLIENT_ENV_FILE"
-  log "Server DATABASE_HOST is synchronized with the MongoDB app credentials."
+  log "Server DATABASE_USERNAME/DATABASE_PASSWORD are synchronized with the MongoDB app credentials."
 }
 
 ############################
@@ -328,8 +418,8 @@ prepare_runtime_config() {
 ############################
 IMAGES=(
     "nginx nginx_latest_$ARCH.tgz latest"
-    "edgev3-nextflow edgev3-nextflow_20260721_$ARCH.tgz 20260721"
-    "edgev3 edgev3_20260818_$ARCH.tgz 20260818"
+    "edgev3-nextflow edgev3-nextflow_20260908_$ARCH.tgz 20260908"
+    "edgev3 edgev3_20260908_$ARCH.tgz 20260908"
     "edgev3-mongo edgev3-mongo_20260818_$ARCH.tgz 20260818"
 )
 

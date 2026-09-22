@@ -76,6 +76,8 @@ Mount the directory read-only with a Compose override. Verify the `known_hosts` 
 
 ## Reference Data For Workflows
 
+Reference data is published at <https://ref-db.edgebioinformatics.org/edgev3/>. That listing mirrors the `/project/refdata` layout, so each top-level entry maps directly onto the same name under `data/refdata`.
+
 Only the modules enabled for a submitted workflow need their matching reference data. The paths below are container paths; on the host, replace `/project/refdata` with `data/refdata`.
 
 | Module or feature | Expected reference data |
@@ -98,6 +100,34 @@ Only the modules enabled for a submitted workflow need their matching reference 
 | Annotation KEGG viewer, when enabled | The configured `keggViewerDir` path for KEGG map data. |
 
 If a workflow module fails with missing files, compare the generated project `nextflow.config` against this table and the selected module options in the UI.
+
+## Downloading Reference Data
+
+Download only the datasets required by the modules you plan to run. Several are very large: the `bwa_index` files total roughly 85 GB, `Kraken2/hash.k2d` is 33 GB, and the top-level `all.accession2taxid.sorted` is 52 GB. `NCBI_genomes` contains thousands of per-genome subdirectories. Confirm available disk space before starting.
+
+Fetch an individual directory into `data/refdata`, preserving the layout the workflows expect:
+
+```bash
+# From the bundle root. -np keeps wget from walking above /edgev3/,
+# and --cut-dirs=1 strips the leading "edgev3" path component.
+wget -r -np -nH --cut-dirs=1 --reject "index.html*" \
+  -P data/refdata \
+  https://ref-db.edgebioinformatics.org/edgev3/bwa_index/
+```
+
+The same pattern works for any other entry, for example `Kraken2/`, `metaphlan4/`, `antismash/`, or the nested `nextflow/database/GOTTCHA/`. Single files are plain downloads:
+
+```bash
+wget -P data/refdata https://ref-db.edgebioinformatics.org/edgev3/taxonomy.tab
+```
+
+Resume an interrupted transfer with `wget -c`, and prefer `rsync`- or `aria2c`-style parallel transfers if available for the multi-gigabyte sets. After downloading, verify the result matches the container paths in the table above:
+
+```bash
+find data/refdata -maxdepth 2 | sort
+```
+
+Workflow container images are pulled separately by Apptainer into `data/refdata/nextflow/.apptainer` on first use; they are not part of this reference-data listing.
 
 ## Quick Checks
 

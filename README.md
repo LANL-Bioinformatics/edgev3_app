@@ -64,15 +64,15 @@ Logs from the helper script are appended to `logs/edgev3.log`. Application logs 
 ```mermaid
 flowchart LR
     browser["User browser"] -->|"HTTP :8080"| web["edgev3_web<br/>nginx:latest<br/>host 8080 -> container 80"]
-    web -->|"reverse proxy<br/>edgev3:5000"| app["edgev3<br/>edgev3:20260908<br/>React build + Express API<br/>PM2 appserver x4 + cronserver"]
+    web -->|"reverse proxy<br/>edgev3:5000"| app["edgev3<br/>edgev3:20260928<br/>React build + Express API<br/>PM2 appserver x4 + cronserver"]
 
     secrets["data/secrets/*.txt<br/>Docker secrets"] --> mongo["mongodb<br/>edgev3-mongo:20260818<br/>MongoDB 7"]
-    secrets --> adminInit["edgev3_admin_init<br/>edgev3:20260908<br/>admin bootstrap"]
+    secrets --> adminInit["edgev3_admin_init<br/>edgev3:20260928<br/>admin bootstrap"]
     mongo -->|"database files"| mongoVol[("mongo_data<br/>/data/db")]
     mongo -. "healthy" .-> adminInit
     adminInit -->|"create or rotate<br/>admin@my.edge"| mongo
 
-    dataInit["edgev3_data_init<br/>edgev3:20260908<br/>runtime permissions"] -->|"chown/chmod"| output["data/output/*<br/>/edgev3/io/*"]
+    dataInit["edgev3_data_init<br/>edgev3:20260928<br/>runtime permissions"] -->|"chown/chmod"| output["data/output/*<br/>/edgev3/io/*"]
     adminInit -. "completed" .-> app
     dataInit -. "completed" .-> app
     mongo -. "healthy" .-> app
@@ -99,9 +99,9 @@ flowchart LR
 | Service | Image | Role |
 | --- | --- | --- |
 | `edgev3_web` | `nginx:latest` | Public entry point on `localhost:8080`; proxies requests to `edgev3:5000` and serves a splash page while the app is unavailable. |
-| `edgev3` | `edgev3:20260908` | Main EDGEv3 web application. Builds the React client, runs the Express API and cron monitor under PM2, and controls Nextflow through the private runner API. |
-| `edgev3_admin_init` | `edgev3:20260908` | One-shot initializer that bcrypt-hashes the generated web-admin password at runtime and creates or rotates the initial administrator before the app starts. |
-| `edgev3_data_init` | `edgev3:20260908` | One-shot initializer that makes bind-mounted runtime output and runner state writable by the non-root services. |
+| `edgev3` | `edgev3:20260928` | Main EDGEv3 web application. Builds the React client, runs the Express API and cron monitor under PM2, and controls Nextflow through the private runner API. |
+| `edgev3_admin_init` | `edgev3:20260928` | One-shot initializer that bcrypt-hashes the generated web-admin password at runtime and creates or rotates the initial administrator before the app starts. |
+| `edgev3_data_init` | `edgev3:20260928` | One-shot initializer that makes bind-mounted runtime output and runner state writable by the non-root services. |
 | `edgev3_nextflow` | `edgev3-nextflow:20260908` | Runs the authenticated durable job API and owns the Nextflow launcher, either locally or through SSH. Its port is exposed only to the Compose network. |
 | `mongodb` | `edgev3-mongo:20260818` | MongoDB database initialized with local secret files and persisted in the `mongo_data` Docker volume. |
 
@@ -255,7 +255,7 @@ To rebuild the local image archives:
 
 The script builds:
 
-- `edgev3:20260908`
+- `edgev3:20260928`
 - `edgev3-nextflow:20260908`
 - `edgev3-mongo:20260818`
 - `nginx:latest`

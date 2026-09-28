@@ -71,7 +71,7 @@ services:
       retries: 12
       start_period: 10s
   edgev3_admin_init:
-    image: edgev3:20260908
+    image: edgev3:20260928
     platform: linux/amd64
     restart: "no"
     depends_on:
@@ -86,7 +86,7 @@ services:
       - ./src/edgev3-mongo/installation/init-edgev3-admin.js:/runtime/init-edgev3-admin.js:ro
     command: ["node", "/runtime/init-edgev3-admin.js"]
   edgev3_data_init:
-    image: edgev3:20260908
+    image: edgev3:20260928
     platform: linux/amd64
     user: "0:0"
     restart: "no"
@@ -110,7 +110,7 @@ services:
         find $${runtime_paths} -type d -exec chmod 2770 {} \;
         find $${runtime_paths} -type f -exec chmod 0660 {} \;
   edgev3:
-    image: edgev3:20260908
+    image: edgev3:20260928
     platform: linux/amd64
     init: true
     restart: always 

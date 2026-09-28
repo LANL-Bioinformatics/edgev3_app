@@ -12,7 +12,7 @@ These files and directories are required for the Docker bundle itself:
 | --- | --- |
 | Compose topology | `docker-compose.yaml` |
 | Lifecycle helper | `edgev3_app.sh` |
-| Application image archive | `docker_images/edgev3_20260908_amd64.tgz` |
+| Application image archive | `docker_images/edgev3_20260928_amd64.tgz` |
 | Nextflow runner image archive | `docker_images/edgev3-nextflow_20260908_amd64.tgz` |
 | MongoDB image archive | `docker_images/edgev3-mongo_20260818_amd64.tgz` |
 | Nginx image archive | `docker_images/nginx_latest_amd64.tgz` |

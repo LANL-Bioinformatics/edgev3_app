@@ -262,6 +262,20 @@ The script builds:
 
 The generated archives are written to `docker_images/` with the current architecture suffix.
 
+By default an image is skipped when its tag already exists locally, and an archive is skipped when
+its `.tgz` already exists. If you change source that is baked into an image without bumping the
+image tag, the rebuild would otherwise be a silent no-op, so use `--force`:
+
+```bash
+./docker_build.sh --force            # rebuild images and rewrite archives
+./docker_build.sh --arch arm64       # target a different architecture
+./docker_build.sh --help
+```
+
+Note that `./src/edge-v3/workflows` is bind-mounted into both the `edgev3` and `edgev3_nextflow`
+services, so workflow changes only need a `docker compose up -d`. Changes to the webapp server or
+client are baked into the `edgev3` image and do require a rebuild.
+
 Rebuild both images after any change to the runner: the tool definition, the
 shared library path, and `RUNNER_TOOL` are all baked in at build time.
 

@@ -57,6 +57,10 @@ services:
       - ./data/output/upload:/edgev3/io/upload
       - ./data/output/bulksubmissions:/edgev3/io/bulksubmissions
       - ./data/output/job_runner:/edgev3/io/job_runner
+      # Mount the workflow tree from source so edits take effect on restart and
+      # cannot drift from the copy in the edgev3 service. Read-only: Nextflow
+      # writes its work/ and reports under /edgev3/io/projects, not here.
+      - ./src/edge-v3/workflows:/edgev3/workflows:ro
       - ./data/container.config:/edgev3/workflows/Nextflow/metagenomics/configs/container.config:ro
       - ./data/local.config:/edgev3/workflows/Nextflow/metagenomics/configs/local.config:ro
       - ./data/refdata:/project/refdata
@@ -151,6 +155,10 @@ services:
       - ./data/output/sra:/edgev3/io/sra
       - ./data/output/upload:/edgev3/io/upload
       - ./data/output/bulksubmissions:/edgev3/io/bulksubmissions
+      # Mount the workflow tree from source so edits take effect on restart and
+      # cannot drift from the copy in the edgev3_nextflow service. Read-only:
+      # the server only reads workflow templates/configs from here.
+      - ./src/edge-v3/workflows:/edgev3/workflows:ro
       - ./data/container.config:/edgev3/workflows/Nextflow/metagenomics/configs/container.config
       - ./data/local.config:/edgev3/workflows/Nextflow/metagenomics/configs/local.config
       #- ./data/nextflow.config:/edgev3/workflows/Nextflow/metagenomics/nextflow/nextflow.config

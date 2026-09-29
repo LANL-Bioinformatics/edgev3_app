@@ -11,3 +11,7 @@ logs/*log
 docker_images/*tgz
 images/flowchart.png
 images/flowchart3.png
+all.accession2taxid.sorted
+taxonomy.tab
+gottcha_db.species.fna.*
+aoi_list.txt
